@@ -62,7 +62,8 @@ body.light .btn{
 }
 
 #settings{
-    top:88px;
+    position:absolute;
+    bottom:107px;
     left:18px;
 }
 
@@ -112,7 +113,7 @@ input[type=range]{
     right:-310px;
     width:300px;
     height:100%;
-    background:#161616;
+    background:#00AC6B;
     transition:.3s;
     z-index:2000;
     padding:20px;
@@ -207,13 +208,22 @@ L.marker([lat,lon]).addTo(map);
 
 // Панель слоев
 
-const layerPanel=document.getElementById("layerPanel");
+;const layerPanel=document.getElementById("layerPanel");
+const layerBtn=document.getElementById("layersBtn");
 
-document.getElementById("layers").onclick=()=>{
+layerBtn.onclick=()=>{
 
-layerPanel.classList.toggle("open");
+    layerPanel.classList.toggle("open");
 
-settingsPanel.classList.remove("open");
+    if(layerPanel.classList.contains("open")){
+        layerBtn.style.right="318px";
+        layerBtn.innerHTML=">";
+    }else{
+        layerBtn.style.right="18px";
+        layerBtn.innerHTML="<";
+    }
+
+    settingsPanel.classList.remove("open");
 
 };
 
@@ -255,3 +265,4 @@ alert("Поиск городов будет добавлен позже.");
 
 </body>
 </html>
+
