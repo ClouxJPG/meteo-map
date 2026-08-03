@@ -10,52 +10,45 @@
 
 <style>
 
-html, body {
-    margin:0;
-    height:100%;
-    font-family:Arial;
+html,body{
+margin:0;
+height:100%;
+font-family:Arial;
 }
 
-#map {
-    height:100%;
+#map{
+height:100%;
 }
 
 
-.panel {
+.panel{
 
-    position:absolute;
-    top:10px;
-    right:10px;
-    z-index:999;
+position:absolute;
+top:10px;
+right:10px;
+z-index:999;
 
-    background:#111;
-    color:white;
+background:#111;
+color:white;
 
-    padding:10px;
+padding:10px;
+border-radius:12px;
 
-    border-radius:12px;
-
-    width:140px;
-
-    font-size:13px;
+width:150px;
 
 }
 
 
-button {
+button{
 
-    width:100%;
+width:100%;
+margin-top:6px;
+padding:7px;
 
-    margin-top:6px;
-
-    padding:6px;
-
-    border:0;
-
-    border-radius:8px;
+border:0;
+border-radius:8px;
 
 }
-
 
 </style>
 
@@ -69,13 +62,21 @@ button {
 
 <b>🌦 Meteo</b>
 
-<button>🌧 Осадки</button>
+<button onclick="toggleRain()">
+🌧 Осадки
+</button>
 
-<button>⚡ Грозы</button>
+<button>
+⚡ Грозы
+</button>
 
-<button>🌀 CAPE</button>
+<button>
+🌀 CAPE
+</button>
 
-<button>💨 Ветер</button>
+<button>
+💨 Ветер
+</button>
 
 
 </div>
@@ -90,8 +91,8 @@ button {
 <script>
 
 
-constconst map = L.map('map').setView([55,60],4);
-.
+const map = L.map('map')
+.setView([55,60],4);
 
 
 
@@ -102,11 +103,55 @@ L.tileLayer(
 
 
 
+let rainLayer;
+
+
+
+function toggleRain(){
+
+
+if(rainLayer){
+
+map.removeLayer(rainLayer);
+
+rainLayer=null;
+
+}
+
+else{
+
+
+rainLayer = L.tileLayer(
+
+'https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=demo',
+
+{
+opacity:0.5
+}
+
+);
+
+
+rainLayer.addTo(map);
+
+
+}
+
+
+}
+
+
+
 let marker;
 
 
 
-function getWeather(lat,lon){
+map.on('click',function(e){
+
+
+let lat=e.latlng.lat;
+let lon=e.latlng.lng;
+
 
 
 fetch(
@@ -118,78 +163,40 @@ fetch(
 
 .then(r=>r.json())
 
-
 .then(data=>{
 
 
-let temp =
-data.hourly.temperature_2m[0];
-
-
-let rain =
-data.hourly.precipitation[0];
-
-
-let wind =
-data.hourly.windspeed_10m[0];
-
-
-let pressure =
-data.hourly.surface_pressure[0];
-
-
-
-let popup = `
+let popup=`
 
 <b>📍 Прогноз</b><br><br>
 
-🌡 ${temp} °C<br>
+🌡 ${data.hourly.temperature_2m[0]} °C<br>
 
-🌧 ${rain} мм<br>
+🌧 ${data.hourly.precipitation[0]} мм<br>
 
-💨 ${wind} км/ч<br>
+💨 ${data.hourly.windspeed_10m[0]} км/ч<br>
 
-⬇ ${pressure} гПа
+⬇ ${data.hourly.surface_pressure[0]} гПа
 
 `;
 
 
 
 if(marker){
-
 map.removeLayer(marker);
-
 }
 
 
-
-marker = L.marker([lat,lon])
+marker=L.marker([lat,lon])
 .addTo(map)
 .bindPopup(popup)
 .openPopup();
 
 
-
 });
 
 
-}
-
-
-
-map.on(
-'click',
-function(e){
-
-getWeather(
-e.latlng.lat,
-e.latlng.lng
-);
-
-}
-
-);
-
+});
 
 
 </script>
