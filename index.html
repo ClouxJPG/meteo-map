@@ -2,7 +2,7 @@
 <html>
 <head>
 
-<title>Meteo Russia</title>
+<title>Meteo Map</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -20,45 +20,137 @@ font-family:Arial;
 height:100%;
 }
 
-.panel{
+
+/* кнопка меню */
+
+#menuBtn{
+
 position:absolute;
 top:10px;
 right:10px;
-z-index:999;
+
+z-index:1000;
 
 background:#111;
 color:white;
 
+border:0;
+border-radius:10px;
+
+padding:10px;
+
+font-size:18px;
+
+}
+
+
+/* панель */
+
+.panel{
+
+position:absolute;
+
+top:55px;
+right:10px;
+
+z-index:999;
+
+background:#111;
+
+color:white;
+
 padding:12px;
+
 border-radius:12px;
 
 width:170px;
+
+transition:.3s;
+
 }
 
+
+.hidden{
+
+display:none;
+
+}
+
+
+
 button{
+
 width:100%;
-margin-top:6px;
+
+margin-top:7px;
 
 padding:8px;
 
 border:0;
+
 border-radius:8px;
+
 }
 
-.time{
-margin-top:10px;
-font-size:14px;
+
+
+
+/* таймлайн */
+
+.timeline{
+
+position:absolute;
+
+bottom:20px;
+
+left:50%;
+
+transform:translateX(-50%);
+
+z-index:999;
+
+background:#111;
+
+color:white;
+
+padding:12px;
+
+border-radius:15px;
+
+width:80%;
+
+max-width:500px;
+
+text-align:center;
+
 }
+
+
+input[type=range]{
+
+width:100%;
+
+}
+
+
 
 </style>
 
 </head>
 
 
+
 <body>
 
 
-<div class="panel">
+<button id="menuBtn">
+☰
+</button>
+
+
+
+<div class="panel" id="panel">
+
 
 <b>🌦 Meteo</b>
 
@@ -69,7 +161,7 @@ font-size:14px;
 
 
 <button onclick="toggleClouds()">
-☁ Облачность
+☁ Облака
 </button>
 
 
@@ -83,34 +175,30 @@ font-size:14px;
 </button>
 
 
-<div class="time">
+</div>
 
-<b>Время:</b>
 
-<button onclick="setTime(0)">
+
+<div class="timeline">
+
+
+<div id="timeText">
 Сейчас
-</button>
-
-<button onclick="setTime(3)">
-+3 часа
-</button>
-
-<button onclick="setTime(6)">
-+6 часов
-</button>
-
-<button onclick="setTime(12)">
-+12 часов
-</button>
-
-<button onclick="setTime(24)">
-+24 часа
-</button>
-
 </div>
 
 
+<input 
+type="range"
+min="0"
+max="24"
+step="3"
+value="0"
+id="timeSlider"
+>
+
+
 </div>
+
 
 
 <div id="map"></div>
@@ -124,6 +212,7 @@ font-size:14px;
 
 
 const API_KEY="b5fd8a2df3a6857059b351884cf1d26b";
+
 
 
 const map=L.map('map')
@@ -143,17 +232,53 @@ let tempLayer;
 let windLayer;
 
 
+
+// меню
+
+document
+.getElementById("menuBtn")
+.onclick=function(){
+
+document
+.getElementById("panel")
+.classList.toggle("hidden");
+
+};
+
+
+
+
+// время
+
+
 let selectedTime=0;
 
 
+let slider=document.getElementById("timeSlider");
 
-function setTime(hours){
 
-selectedTime=hours;
+slider.oninput=function(){
 
-alert("Выбрано время: +" + hours + " часов");
+selectedTime=this.value;
+
+
+if(selectedTime==0){
+
+document.getElementById("timeText").innerHTML=
+"Сейчас";
 
 }
+
+else{
+
+document.getElementById("timeText").innerHTML=
+"+"+selectedTime+" часов";
+
+}
+
+
+};
+
 
 
 
@@ -165,7 +290,9 @@ if(rainLayer){
 map.removeLayer(rainLayer);
 rainLayer=null;
 
-}else{
+}
+
+else{
 
 rainLayer=L.tileLayer(
 
@@ -191,7 +318,9 @@ if(cloudLayer){
 map.removeLayer(cloudLayer);
 cloudLayer=null;
 
-}else{
+}
+
+else{
 
 cloudLayer=L.tileLayer(
 
@@ -210,6 +339,7 @@ opacity:0.8
 
 
 
+
 function toggleTemp(){
 
 if(tempLayer){
@@ -217,38 +347,13 @@ if(tempLayer){
 map.removeLayer(tempLayer);
 tempLayer=null;
 
-}else{
+}
+
+else{
 
 tempLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
-
-{
-opacity:1.0
-}
-
-).addTo(map);
-
-}
-
-}
-
-
-
-
-
-function toggleWind(){
-
-if(windLayer){
-
-map.removeLayer(windLayer);
-windLayer=null;
-
-}else{
-
-windLayer=L.tileLayer(
-
-`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
 {
 opacity:0.8
@@ -263,12 +368,43 @@ opacity:0.8
 
 
 
+function toggleWind(){
+
+if(windLayer){
+
+map.removeLayer(windLayer);
+windLayer=null;
+
+}
+
+else{
+
+
+windLayer=L.tileLayer(
+
+`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
+
+{
+opacity:0.8
+}
+
+).addTo(map);
+
+
+}
+
+}
+
+
+
+
+// клик по карте
+
 
 let marker;
 
 
-
-map.on('click',function(e){
+map.on("click",function(e){
 
 
 let lat=e.latlng.lat;
@@ -287,56 +423,53 @@ fetch(
 .then(data=>{
 
 
-let index=Math.floor(selectedTime/3);
+let id=Math.floor(selectedTime/3);
 
 
-let item=data.list[index];
+let weather=data.list[id];
 
 
 
-let popup=`
+let text=`
 
-<b>📍 ${data.city.name}</b><br><br>
-
-⏰ Прогноз: +${selectedTime} ч
+<b>📍 ${data.city.name}</b>
 
 <br><br>
 
-🌡 Температура:
-${item.main.temp} °C
+⏰ Прогноз: +${selectedTime}ч
+
+<br><br>
+
+🌡 ${weather.main.temp} °C
 
 <br>
 
-☁ ${item.weather[0].description}
+☁ ${weather.weather[0].description}
 
 <br>
 
-💧 Влажность:
-${item.main.humidity} %
+💧 ${weather.main.humidity}%
 
 <br>
 
-💨 Ветер:
-${item.wind.speed} м/с
+💨 ${weather.wind.speed} м/с
 
 <br>
 
-⬇ Давление:
-${item.main.pressure} гПа
+⬇ ${weather.main.pressure} гПа
 
 `;
 
 
 
-if(marker){
+if(marker)
 map.removeLayer(marker);
-}
 
 
 
 marker=L.marker([lat,lon])
 .addTo(map)
-.bindPopup(popup)
+.bindPopup(text)
 .openPopup();
 
 
@@ -345,6 +478,7 @@ marker=L.marker([lat,lon])
 
 
 });
+
 
 
 </script>
