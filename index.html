@@ -42,17 +42,15 @@ font-size:18px;
 position:absolute;
 top:55px;
 right:10px;
-
 z-index:999;
 
 background:#111;
 color:white;
 
 padding:12px;
-
 border-radius:12px;
 
-width:170px;
+width:180px;
 }
 
 
@@ -62,6 +60,7 @@ display:none;
 
 
 button{
+
 width:100%;
 margin-top:7px;
 
@@ -69,6 +68,7 @@ padding:8px;
 
 border:0;
 border-radius:8px;
+
 }
 
 
@@ -78,13 +78,11 @@ position:absolute;
 bottom:20px;
 
 left:50%;
-
 transform:translateX(-50%);
 
 z-index:999;
 
 background:#111;
-
 color:white;
 
 padding:12px;
@@ -103,6 +101,19 @@ input{
 width:100%;
 }
 
+
+#windCanvas{
+
+position:absolute;
+top:0;
+left:0;
+
+z-index:500;
+
+pointer-events:none;
+
+}
+
 </style>
 
 </head>
@@ -118,21 +129,31 @@ width:100%;
 
 <b>🌦 Meteo</b>
 
+
 <button onclick="toggleRain()">
 🌧 Осадки
 </button>
+
 
 <button onclick="toggleClouds()">
 ☁ Облака
 </button>
 
+
 <button onclick="toggleTemp()">
 🌡 Температура
 </button>
 
+
 <button onclick="toggleWindLayer()">
-💨 Ветер
+💨 Слой ветра
 </button>
+
+
+<button onclick="toggleParticles()">
+🌬 Частицы ветра
+</button>
+
 
 </div>
 
@@ -145,15 +166,14 @@ width:100%;
 </div>
 
 <input 
-id="timeSlider"
 type="range"
+id="timeSlider"
 min="0"
 max="24"
 step="3"
 value="0">
 
 </div>
-
 
 
 <div id="map"></div>
@@ -168,13 +188,13 @@ value="0">
 const API_KEY="b5fd8a2df3a6857059b351884cf1d26b";
 
 
-const map=L.map('map')
+const map=L.map("map")
 .setView([55,60],4);
 
 
 
 L.tileLayer(
-'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+"https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 )
 .addTo(map);
 
@@ -186,20 +206,17 @@ let tempLayer;
 let windLayer;
 
 
-let marker;
+let marker=null;
 
-let currentLat;
-let currentLon;
 
-let forecastData;
-
+let forecast=null;
 
 
 let selectedHour=0;
 
 
-
-document.getElementById("menuBtn").onclick=function(){
+document.getElementById("menuBtn")
+.onclick=function(){
 
 document.getElementById("panel")
 .classList.toggle("hidden");
@@ -209,68 +226,25 @@ document.getElementById("panel")
 
 
 
-// загрузка прогноза
-
-
-function loadForecast(){
-
-
-if(currentLat==null)
-return;
-
-
-
-fetch(
-
-`https://api.openweathermap.org/data/2.5/forecast?lat=${currentLat}&lon=${currentLon}&units=metric&lang=ru&appid=${API_KEY}`
-
-)
-
-.then(r=>r.json())
-
-.then(data=>{
-
-
-forecastData=data;
-
-
-updatePopup();
-
-
-});
-
-
-}
-
-
-
-
-// обновление окна
-
 
 function updatePopup(){
 
 
-if(!forecastData || !marker)
+if(!forecast || !marker)
 return;
 
 
 
-let index=selectedHour/3;
+let item=forecast.list[selectedHour/3];
+
+
+let date=new Date(item.dt*1000);
 
 
 
-let w=forecastData.list[index];
+let text=`
 
-
-
-let date=new Date(w.dt*1000);
-
-
-
-let popup=`
-
-<b>📍 ${forecastData.city.name}</b>
+<b>📍 ${forecast.city.name}</b>
 
 <br><br>
 
@@ -278,44 +252,37 @@ let popup=`
 
 <br><br>
 
-🌡 Температура:
-${w.main.temp} °C
+🌡 ${item.main.temp} °C
 
 <br>
 
-☁ ${w.weather[0].description}
+☁ ${item.weather[0].description}
 
 <br>
 
-🌧 Осадки:
-${w.pop*100}%
-
+🌧 Вероятность осадков:
+${Math.round(item.pop*100)}%
 
 <br>
 
 💧 Влажность:
-${w.main.humidity}%
-
+${item.main.humidity}%
 
 <br>
 
 💨 Ветер:
-${w.wind.speed} м/с
-
+${item.wind.speed} м/с
 
 <br>
 
 ⬇ Давление:
-${w.main.pressure} гПа
+${item.main.pressure} гПа
 
 `;
 
 
 
-marker.setPopupContent(popup);
-
-
-
+marker.setPopupContent(text);
 
 }
 
@@ -323,24 +290,21 @@ marker.setPopupContent(popup);
 
 
 
-// ползунок
-
-
-document.getElementById("timeSlider").oninput=function(){
+document.getElementById("timeSlider")
+.oninput=function(){
 
 
 selectedHour=Number(this.value);
 
 
-
-document.getElementById("timeText").innerHTML=
+document.getElementById("timeText")
+.innerHTML=
 
 selectedHour==0
 ?
 "Сейчас"
 :
 "+"+selectedHour+" часов";
-
 
 
 updatePopup();
@@ -352,7 +316,53 @@ updatePopup();
 
 
 
-// слои
+map.on("click",function(e){
+
+
+let lat=e.latlng.lat;
+let lon=e.latlng.lng;
+
+
+fetch(
+
+`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`
+
+)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+
+forecast=data;
+
+
+if(marker)
+map.removeLayer(marker);
+
+
+
+marker=L.marker([lat,lon])
+.addTo(map);
+
+
+marker.bindPopup("Загрузка...");
+
+
+marker.openPopup();
+
+
+
+updatePopup();
+
+
+
+});
+
+});
+  // =======================
+// СЛОИ OPENWEATHER
+// =======================
 
 
 function toggleRain(){
@@ -360,7 +370,6 @@ function toggleRain(){
 if(rainLayer){
 
 map.removeLayer(rainLayer);
-
 rainLayer=null;
 
 }
@@ -371,7 +380,9 @@ rainLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{opacity:0.9}
+{
+opacity:0.9
+}
 
 ).addTo(map);
 
@@ -387,7 +398,6 @@ function toggleClouds(){
 if(cloudLayer){
 
 map.removeLayer(cloudLayer);
-
 cloudLayer=null;
 
 }
@@ -398,7 +408,9 @@ cloudLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{opacity:0.8}
+{
+opacity:0.8
+}
 
 ).addTo(map);
 
@@ -409,12 +421,12 @@ cloudLayer=L.tileLayer(
 
 
 
+
 function toggleTemp(){
 
 if(tempLayer){
 
 map.removeLayer(tempLayer);
-
 tempLayer=null;
 
 }
@@ -425,7 +437,9 @@ tempLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{opacity:0.8}
+{
+opacity:0.8
+}
 
 ).addTo(map);
 
@@ -441,7 +455,6 @@ function toggleWindLayer(){
 if(windLayer){
 
 map.removeLayer(windLayer);
-
 windLayer=null;
 
 }
@@ -452,7 +465,9 @@ windLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{opacity:0.8}
+{
+opacity:0.8
+}
 
 ).addTo(map);
 
@@ -464,29 +479,194 @@ windLayer=L.tileLayer(
 
 
 
-// клик по карте
+// =======================
+// ЧАСТИЦЫ ВЕТРА
+// =======================
 
 
-map.on("click",function(e){
+let windParticles=[];
 
+let windActive=false;
 
-currentLat=e.latlng.lat;
+let windCanvas;
 
-currentLon=e.latlng.lng;
+let windCtx;
 
-
-
-if(marker)
-map.removeLayer(marker);
-
-
-
-marker=L.marker([currentLat,currentLon])
-.addTo(map);
+let windAnimation;
 
 
 
-loadForecast();
+function toggleParticles(){
+
+
+if(windActive){
+
+windActive=false;
+
+
+cancelAnimationFrame(windAnimation);
+
+
+if(windCanvas){
+
+windCanvas.remove();
+
+windCanvas=null;
+
+}
+
+
+return;
+
+}
+
+
+
+windActive=true;
+
+
+windCanvas=document.createElement("canvas");
+
+
+windCanvas.id="windCanvas";
+
+
+document.body.appendChild(windCanvas);
+
+
+
+windCtx=windCanvas.getContext("2d");
+
+
+
+resizeWind();
+
+
+
+windParticles=[];
+
+
+
+for(let i=0;i<350;i++){
+
+
+windParticles.push({
+
+x:Math.random()*window.innerWidth,
+
+y:Math.random()*window.innerHeight,
+
+speed:1+Math.random()*3,
+
+length:5+Math.random()*15
+
+});
+
+
+}
+
+
+
+animateWind();
+
+
+
+}
+
+
+
+
+function resizeWind(){
+
+if(!windCanvas)
+return;
+
+
+windCanvas.width=window.innerWidth;
+
+windCanvas.height=window.innerHeight;
+
+
+}
+
+
+
+
+window.addEventListener(
+"resize",
+resizeWind
+);
+
+
+
+
+
+function animateWind(){
+
+
+if(!windActive)
+return;
+
+
+
+windCtx.clearRect(
+
+0,
+0,
+windCanvas.width,
+windCanvas.height
+
+);
+
+
+
+windCtx.strokeStyle="white";
+
+windCtx.globalAlpha=0.45;
+
+
+
+windParticles.forEach(p=>{
+
+
+windCtx.beginPath();
+
+
+windCtx.moveTo(
+p.x,
+p.y
+);
+
+
+
+p.x+=p.speed;
+
+
+
+windCtx.lineTo(
+
+p.x+p.length,
+
+p.y
+
+);
+
+
+
+windCtx.stroke();
+
+
+
+if(p.x>windCanvas.width+30){
+
+
+p.x=-30;
+
+
+p.y=Math.random()*windCanvas.height;
+
+
+}
 
 
 
@@ -494,8 +674,9 @@ loadForecast();
 
 
 
-</script>
+windAnimation=requestAnimationFrame(
+animateWind
+);
 
 
-</body>
-</html>
+}
