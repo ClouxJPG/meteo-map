@@ -21,14 +21,10 @@ height:100%;
 }
 
 
-/* кнопка меню */
-
 #menuBtn{
-
 position:absolute;
 top:10px;
 right:10px;
-
 z-index:1000;
 
 background:#111;
@@ -38,25 +34,18 @@ border:0;
 border-radius:10px;
 
 padding:10px;
-
 font-size:18px;
-
 }
 
 
-/* панель */
-
 .panel{
-
 position:absolute;
-
 top:55px;
 right:10px;
 
 z-index:999;
 
 background:#111;
-
 color:white;
 
 padding:12px;
@@ -64,43 +53,28 @@ padding:12px;
 border-radius:12px;
 
 width:170px;
-
-transition:.3s;
-
 }
 
 
 .hidden{
-
 display:none;
-
 }
 
 
-
 button{
-
 width:100%;
-
 margin-top:7px;
 
 padding:8px;
 
 border:0;
-
 border-radius:8px;
-
 }
 
-
-
-
-/* таймлайн */
 
 .timeline{
 
 position:absolute;
-
 bottom:20px;
 
 left:50%;
@@ -118,7 +92,6 @@ padding:12px;
 border-radius:15px;
 
 width:80%;
-
 max-width:500px;
 
 text-align:center;
@@ -126,54 +99,40 @@ text-align:center;
 }
 
 
-input[type=range]{
-
+input{
 width:100%;
-
 }
-
-
 
 </style>
 
 </head>
 
 
-
 <body>
 
 
-<button id="menuBtn">
-☰
-</button>
-
+<button id="menuBtn">☰</button>
 
 
 <div class="panel" id="panel">
 
-
 <b>🌦 Meteo</b>
-
 
 <button onclick="toggleRain()">
 🌧 Осадки
 </button>
 
-
 <button onclick="toggleClouds()">
 ☁ Облака
 </button>
-
 
 <button onclick="toggleTemp()">
 🌡 Температура
 </button>
 
-
-<button onclick="toggleWind()">
+<button onclick="toggleWindLayer()">
 💨 Ветер
 </button>
-
 
 </div>
 
@@ -181,28 +140,23 @@ width:100%;
 
 <div class="timeline">
 
-
 <div id="timeText">
 Сейчас
 </div>
 
-
 <input 
+id="timeSlider"
 type="range"
 min="0"
 max="24"
 step="3"
-value="0"
-id="timeSlider"
->
-
+value="0">
 
 </div>
 
 
 
 <div id="map"></div>
-
 
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -214,7 +168,6 @@ id="timeSlider"
 const API_KEY="b5fd8a2df3a6857059b351884cf1d26b";
 
 
-
 const map=L.map('map')
 .setView([55,60],4);
 
@@ -222,7 +175,8 @@ const map=L.map('map')
 
 L.tileLayer(
 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-).addTo(map);
+)
+.addTo(map);
 
 
 
@@ -232,15 +186,22 @@ let tempLayer;
 let windLayer;
 
 
+let marker;
 
-// меню
+let currentLat;
+let currentLon;
 
-document
-.getElementById("menuBtn")
-.onclick=function(){
+let forecastData;
 
-document
-.getElementById("panel")
+
+
+let selectedHour=0;
+
+
+
+document.getElementById("menuBtn").onclick=function(){
+
+document.getElementById("panel")
 .classList.toggle("hidden");
 
 };
@@ -248,33 +209,141 @@ document
 
 
 
-// время
+// загрузка прогноза
 
 
-let selectedTime=0;
+function loadForecast(){
 
 
-let slider=document.getElementById("timeSlider");
+if(currentLat==null)
+return;
 
 
-slider.oninput=function(){
 
-selectedTime=this.value;
+fetch(
+
+`https://api.openweathermap.org/data/2.5/forecast?lat=${currentLat}&lon=${currentLon}&units=metric&lang=ru&appid=${API_KEY}`
+
+)
+
+.then(r=>r.json())
+
+.then(data=>{
 
 
-if(selectedTime==0){
+forecastData=data;
 
-document.getElementById("timeText").innerHTML=
-"Сейчас";
+
+updatePopup();
+
+
+});
+
 
 }
 
-else{
 
-document.getElementById("timeText").innerHTML=
-"+"+selectedTime+" часов";
+
+
+// обновление окна
+
+
+function updatePopup(){
+
+
+if(!forecastData || !marker)
+return;
+
+
+
+let index=selectedHour/3;
+
+
+
+let w=forecastData.list[index];
+
+
+
+let date=new Date(w.dt*1000);
+
+
+
+let popup=`
+
+<b>📍 ${forecastData.city.name}</b>
+
+<br><br>
+
+🕒 ${date.toLocaleString("ru-RU")}
+
+<br><br>
+
+🌡 Температура:
+${w.main.temp} °C
+
+<br>
+
+☁ ${w.weather[0].description}
+
+<br>
+
+🌧 Осадки:
+${w.pop*100}%
+
+
+<br>
+
+💧 Влажность:
+${w.main.humidity}%
+
+
+<br>
+
+💨 Ветер:
+${w.wind.speed} м/с
+
+
+<br>
+
+⬇ Давление:
+${w.main.pressure} гПа
+
+`;
+
+
+
+marker.setPopupContent(popup);
+
+
+
 
 }
+
+
+
+
+
+// ползунок
+
+
+document.getElementById("timeSlider").oninput=function(){
+
+
+selectedHour=Number(this.value);
+
+
+
+document.getElementById("timeText").innerHTML=
+
+selectedHour==0
+?
+"Сейчас"
+:
+"+"+selectedHour+" часов";
+
+
+
+updatePopup();
 
 
 };
@@ -283,11 +352,15 @@ document.getElementById("timeText").innerHTML=
 
 
 
+// слои
+
+
 function toggleRain(){
 
 if(rainLayer){
 
 map.removeLayer(rainLayer);
+
 rainLayer=null;
 
 }
@@ -298,9 +371,7 @@ rainLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{
-opacity:0.9
-}
+{opacity:0.9}
 
 ).addTo(map);
 
@@ -316,6 +387,7 @@ function toggleClouds(){
 if(cloudLayer){
 
 map.removeLayer(cloudLayer);
+
 cloudLayer=null;
 
 }
@@ -326,9 +398,7 @@ cloudLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{
-opacity:0.8
-}
+{opacity:0.8}
 
 ).addTo(map);
 
@@ -339,12 +409,12 @@ opacity:0.8
 
 
 
-
 function toggleTemp(){
 
 if(tempLayer){
 
 map.removeLayer(tempLayer);
+
 tempLayer=null;
 
 }
@@ -355,9 +425,7 @@ tempLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{
-opacity:0.8
-}
+{opacity:0.8}
 
 ).addTo(map);
 
@@ -368,32 +436,30 @@ opacity:0.8
 
 
 
-function toggleWind(){
+function toggleWindLayer(){
 
 if(windLayer){
 
 map.removeLayer(windLayer);
+
 windLayer=null;
 
 }
 
 else{
 
-
 windLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
-{
-opacity:0.8
-}
+{opacity:0.8}
 
 ).addTo(map);
 
-
 }
 
 }
+
 
 
 
@@ -401,64 +467,12 @@ opacity:0.8
 // клик по карте
 
 
-let marker;
-
-
 map.on("click",function(e){
 
 
-let lat=e.latlng.lat;
-let lon=e.latlng.lng;
+currentLat=e.latlng.lat;
 
-
-
-fetch(
-
-`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`
-
-)
-
-.then(r=>r.json())
-
-.then(data=>{
-
-
-let id=Math.floor(selectedTime/3);
-
-
-let weather=data.list[id];
-
-
-
-let text=`
-
-<b>📍 ${data.city.name}</b>
-
-<br><br>
-
-⏰ Прогноз: +${selectedTime}ч
-
-<br><br>
-
-🌡 ${weather.main.temp} °C
-
-<br>
-
-☁ ${weather.weather[0].description}
-
-<br>
-
-💧 ${weather.main.humidity}%
-
-<br>
-
-💨 ${weather.wind.speed} м/с
-
-<br>
-
-⬇ ${weather.main.pressure} гПа
-
-`;
+currentLon=e.latlng.lng;
 
 
 
@@ -467,14 +481,13 @@ map.removeLayer(marker);
 
 
 
-marker=L.marker([lat,lon])
-.addTo(map)
-.bindPopup(text)
-.openPopup();
+marker=L.marker([currentLat,currentLon])
+.addTo(map);
 
 
 
-});
+loadForecast();
+
 
 
 });
