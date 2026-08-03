@@ -108,28 +108,34 @@ input[type=range]{
 }
 
 .panel{
-    position:absolute;
+    position:fixed;
     top:0;
     right:0;
     width:300px;
-    height:100%;
+    height:100vh;
     background:#00AC6B;
     transition:.3s ease;
     z-index:2000;
     padding:20px;
     overflow:hidden;
-    transform:translateX(100%);
-    pointer-events:none;
+    transform:translateX(110%);
+    visibility:hidden;
 }
 
 .panel.open{
     transform:translateX(0);
-    pointer-events:auto;
+    visibility:visible;
 }
 
 body.light .panel{
     background:#ffffff;
 }
+
+ body{
+    overflow:hidden;
+    width:100vw;
+    height:100vh;
+}   
 
 .panel h2{
     margin-bottom:20px;
