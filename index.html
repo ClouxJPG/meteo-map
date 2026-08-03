@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meteo Radar</title>
+<title>Meteoforecast.ru</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -151,7 +151,7 @@ body.light .panel{
 
 <button class="btn" id="search">🔍</button>
 
-<button class="btn" id="layers">◀</button>
+<button class="btn" id="layers">⬅️</button>
 
 <div id="timeline">
 <label>Время</label>
@@ -169,13 +169,13 @@ body.light .panel{
 
 </div>
 
-<div class="panel" id="settingsPanel">
+<div id="settingsPanel">
 
-<h2>Настройки</h2>
+<h2>Н<h2>settings</h2>
 
-<button id="darkTheme">🌙 Темная тема</button>
+<button id="darkTheme"> Темная тема</button>
 
-<button id="lightTheme">☀ Светлая тема</button>
+<button id="lightTheme"> Светлая тема</button>
 
 </div>
 
@@ -231,11 +231,11 @@ layerBtn.onclick=()=>{
 
 const settingsPanel=document.getElementById("settingsPanel");
 
-document.getElementById("settings").onclick=()=>{
+document.getElementById("settings").onclick = () => {
 
-settingsPanel.classList.toggle("open");
+    settingsPanel.classList.toggle("open");
 
-layerPanel.classList.remove("open");
+    layerPanel.classList.remove("open");
 
 };
 
@@ -257,7 +257,7 @@ document.body.classList.add("light");
 
 document.getElementById("search").onclick=()=>{
 
-alert("Поиск городов будет добавлен позже.");
+alert("поиск городов в разработке.");
 
 };
 
