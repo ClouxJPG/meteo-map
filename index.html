@@ -31,11 +31,28 @@ html, body {
     background:#111;
     color:white;
 
-    padding:8px 12px;
+    padding:10px;
 
-    border-radius:10px;
+    border-radius:12px;
 
-    font-size:14px;
+    width:140px;
+
+    font-size:13px;
+
+}
+
+
+button {
+
+    width:100%;
+
+    margin-top:6px;
+
+    padding:6px;
+
+    border:0;
+
+    border-radius:8px;
 
 }
 
@@ -50,13 +67,21 @@ html, body {
 
 <div class="panel">
 
-🌦 Meteo Russia
+<b>🌦 Meteo</b>
+
+<button>🌧 Осадки</button>
+
+<button>⚡ Грозы</button>
+
+<button>🌀 CAPE</button>
+
+<button>💨 Ветер</button>
+
 
 </div>
 
 
 <div id="map"></div>
-
 
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -71,10 +96,7 @@ const map = L.map('map')
 
 
 L.tileLayer(
-'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-attribution:'© OpenStreetMap'
-}
+'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 )
 .addTo(map);
 
@@ -94,7 +116,7 @@ fetch(
 )
 
 
-.then(response=>response.json())
+.then(r=>r.json())
 
 
 .then(data=>{
@@ -119,32 +141,24 @@ data.hourly.surface_pressure[0];
 
 let popup = `
 
-<b>🌦 Прогноз</b><br><br>
+<b>📍 Прогноз</b><br><br>
 
-🌡 Температура:
-${temp} °C
+🌡 ${temp} °C<br>
 
-<br>
+🌧 ${rain} мм<br>
 
-🌧 Осадки:
-${rain} мм
+💨 ${wind} км/ч<br>
 
-<br>
-
-💨 Ветер:
-${wind} км/ч
-
-<br>
-
-⬇ Давление:
-${pressure} гПа
+⬇ ${pressure} гПа
 
 `;
 
 
 
 if(marker){
+
 map.removeLayer(marker);
+
 }
 
 
@@ -167,14 +181,15 @@ map.on(
 'click',
 function(e){
 
-
 getWeather(
 e.latlng.lat,
 e.latlng.lng
 );
 
+}
 
-});
+);
+
 
 
 </script>
