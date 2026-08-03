@@ -29,18 +29,25 @@ z-index:999;
 background:#111;
 color:white;
 
-padding:10px;
+padding:12px;
 border-radius:12px;
 
-width:150px;
+width:170px;
 }
 
 button{
 width:100%;
 margin-top:6px;
-padding:7px;
+
+padding:8px;
+
 border:0;
 border-radius:8px;
+}
+
+.time{
+margin-top:10px;
+font-size:14px;
 }
 
 </style>
@@ -55,14 +62,59 @@ border-radius:8px;
 
 <b>🌦 Meteo</b>
 
+
 <button onclick="toggleRain()">
 🌧 Осадки
+</button>
+
+
+<button onclick="toggleClouds()">
+☁ Облачность
+</button>
+
+
+<button onclick="toggleTemp()">
+🌡 Температура
+</button>
+
+
+<button onclick="toggleWind()">
+💨 Ветер
+</button>
+
+
+<div class="time">
+
+<b>Время:</b>
+
+<button onclick="setTime(0)">
+Сейчас
+</button>
+
+<button onclick="setTime(3)">
++3 часа
+</button>
+
+<button onclick="setTime(6)">
++6 часов
+</button>
+
+<button onclick="setTime(12)">
++12 часов
+</button>
+
+<button onclick="setTime(24)">
++24 часа
 </button>
 
 </div>
 
 
+</div>
+
+
 <div id="map"></div>
+
 
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -71,52 +123,138 @@ border-radius:8px;
 <script>
 
 
-const API_KEY = "b5fd8a2df3a6857059b351884cf1d26b";
+const API_KEY="b5fd8a2df3a6857059b351884cf1d26b";
 
 
-
-const map = L.map('map')
+const map=L.map('map')
 .setView([55,60],4);
 
 
 
 L.tileLayer(
 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-)
-.addTo(map);
+).addTo(map);
 
 
 
 let rainLayer;
+let cloudLayer;
+let tempLayer;
+let windLayer;
+
+
+let selectedTime=0;
+
+
+
+function setTime(hours){
+
+selectedTime=hours;
+
+alert("Выбрано время: +" + hours + " часов");
+
+}
+
 
 
 
 function toggleRain(){
-
 
 if(rainLayer){
 
 map.removeLayer(rainLayer);
 rainLayer=null;
 
-}
+}else{
 
-else{
-
-
-rainLayer = L.tileLayer(
+rainLayer=L.tileLayer(
 
 `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
 {
-opacity:1.1
+opacity:0.9
 }
 
-);
+).addTo(map);
+
+}
+
+}
 
 
-rainLayer.addTo(map);
 
+
+function toggleClouds(){
+
+if(cloudLayer){
+
+map.removeLayer(cloudLayer);
+cloudLayer=null;
+
+}else{
+
+cloudLayer=L.tileLayer(
+
+`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
+
+{
+opacity:0.8
+}
+
+).addTo(map);
+
+}
+
+}
+
+
+
+
+function toggleTemp(){
+
+if(tempLayer){
+
+map.removeLayer(tempLayer);
+tempLayer=null;
+
+}else{
+
+tempLayer=L.tileLayer(
+
+`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
+
+{
+opacity:1.0
+}
+
+).addTo(map);
+
+}
+
+}
+
+
+
+
+
+function toggleWind(){
+
+if(windLayer){
+
+map.removeLayer(windLayer);
+windLayer=null;
+
+}else{
+
+windLayer=L.tileLayer(
+
+`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
+
+{
+opacity:0.8
+}
+
+).addTo(map);
 
 }
 
@@ -140,36 +278,51 @@ let lon=e.latlng.lng;
 
 fetch(
 
-`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`
+`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`
 
 )
-
 
 .then(r=>r.json())
 
 .then(data=>{
 
 
+let index=Math.floor(selectedTime/3);
+
+
+let item=data.list[index];
+
+
+
 let popup=`
 
-<b>📍 ${data.name}</b><br><br>
+<b>📍 ${data.city.name}</b><br><br>
+
+⏰ Прогноз: +${selectedTime} ч
+
+<br><br>
 
 🌡 Температура:
-${data.main.temp} °C
+${item.main.temp} °C
 
 <br>
 
-☁ ${data.weather[0].description}
+☁ ${item.weather[0].description}
+
+<br>
+
+💧 Влажность:
+${item.main.humidity} %
 
 <br>
 
 💨 Ветер:
-${data.wind.speed} м/с
+${item.wind.speed} м/с
 
 <br>
 
 ⬇ Давление:
-${data.main.pressure} гПа
+${item.main.pressure} гПа
 
 `;
 
@@ -178,6 +331,7 @@ ${data.main.pressure} гПа
 if(marker){
 map.removeLayer(marker);
 }
+
 
 
 marker=L.marker([lat,lon])
