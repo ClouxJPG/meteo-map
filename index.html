@@ -20,9 +20,7 @@ font-family:Arial;
 height:100%;
 }
 
-
 .panel{
-
 position:absolute;
 top:10px;
 right:10px;
@@ -35,19 +33,14 @@ padding:10px;
 border-radius:12px;
 
 width:150px;
-
 }
 
-
 button{
-
 width:100%;
 margin-top:6px;
 padding:7px;
-
 border:0;
 border-radius:8px;
-
 }
 
 </style>
@@ -66,19 +59,6 @@ border-radius:8px;
 🌧 Осадки
 </button>
 
-<button>
-⚡ Грозы
-</button>
-
-<button>
-🌀 CAPE
-</button>
-
-<button>
-💨 Ветер
-</button>
-
-
 </div>
 
 
@@ -89,6 +69,10 @@ border-radius:8px;
 
 
 <script>
+
+
+const API_KEY = "b5fd8a2df3a6857059b351884cf1d26b";
+
 
 
 const map = L.map('map')
@@ -109,6 +93,7 @@ let rainLayer;
 
 function toggleRain(){
 
+
 if(rainLayer){
 
 map.removeLayer(rainLayer);
@@ -118,20 +103,10 @@ rainLayer=null;
 
 else{
 
-fetch('https://api.rainviewer.com/public/weather-maps.json')
-
-.then(r=>r.json())
-
-.then(data=>{
-
-let frames = data.radar.past;
-
-let latest = frames[frames.length-1];
-
 
 rainLayer = L.tileLayer(
 
-`https://tilecache.rainviewer.com/v2/radar/${latest.path}/256/{z}/{x}/{y}/2/1_1.png`,
+`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
 
 {
 opacity:0.6
@@ -142,12 +117,12 @@ opacity:0.6
 
 rainLayer.addTo(map);
 
-});
-
 
 }
 
 }
+
+
 
 
 
@@ -165,7 +140,7 @@ let lon=e.latlng.lng;
 
 fetch(
 
-`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,windspeed_10m,surface_pressure`
+`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`
 
 )
 
@@ -177,15 +152,24 @@ fetch(
 
 let popup=`
 
-<b>📍 Прогноз</b><br><br>
+<b>📍 ${data.name}</b><br><br>
 
-🌡 ${data.hourly.temperature_2m[0]} °C<br>
+🌡 Температура:
+${data.main.temp} °C
 
-🌧 ${data.hourly.precipitation[0]} мм<br>
+<br>
 
-💨 ${data.hourly.windspeed_10m[0]} км/ч<br>
+☁ ${data.weather[0].description}
 
-⬇ ${data.hourly.surface_pressure[0]} гПа
+<br>
+
+💨 Ветер:
+${data.wind.speed} м/с
+
+<br>
+
+⬇ Давление:
+${data.main.pressure} гПа
 
 `;
 
@@ -200,6 +184,7 @@ marker=L.marker([lat,lon])
 .addTo(map)
 .bindPopup(popup)
 .openPopup();
+
 
 
 });
