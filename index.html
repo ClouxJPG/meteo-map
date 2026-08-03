@@ -110,7 +110,7 @@ input[type=range]{
 .panel{
     position:absolute;
     top:0;
-    right:-320px;
+    right:0;
     width:300px;
     height:100%;
     background:#00AC6B;
@@ -118,14 +118,17 @@ input[type=range]{
     z-index:2000;
     padding:20px;
     overflow:hidden;
+    transform:translateX(100%);
+    pointer-events:none;
+}
+
+.panel.open{
+    transform:translateX(0);
+    pointer-events:auto;
 }
 
 body.light .panel{
     background:#ffffff;
-}
-
-.panel.open{
-    right:0;
 }
 
 .panel h2{
@@ -211,7 +214,8 @@ L.marker([lat,lon]).addTo(map);
 
 ;const layerPanel=document.getElementById("layerPanel");
 const layerBtn=document.getElementById("layers");
-
+const settingsPanel=document.getElementById("settingsPanel");
+    
 layerBtn.onclick=()=>{
 
     layerPanel.classList.toggle("open");
@@ -230,7 +234,6 @@ layerBtn.onclick=()=>{
 
 // Настройки
 
-const settingsPanel=document.getElementById("settingsPanel");
 
 document.getElementById("settings").onclick = () => {
 
