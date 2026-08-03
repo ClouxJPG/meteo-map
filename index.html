@@ -20,23 +20,25 @@ html, body {
     height:100%;
 }
 
+
 .panel {
+
     position:absolute;
     top:10px;
-    left:10px;
+    right:10px;
     z-index:999;
+
     background:#111;
     color:white;
-    padding:15px;
-    border-radius:12px;
-    width:260px;
+
+    padding:8px 12px;
+
+    border-radius:10px;
+
+    font-size:14px;
+
 }
 
-button {
-    margin-top:10px;
-    padding:8px;
-    width:100%;
-}
 
 </style>
 
@@ -48,20 +50,13 @@ button {
 
 <div class="panel">
 
-<h3>🌦 Meteo Russia</h3>
-
-<div id="info">
-Нажми на карту
-</div>
-
-<button onclick="location.reload()">
-Обновить
-</button>
+🌦 Meteo Russia
 
 </div>
 
 
 <div id="map"></div>
+
 
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -74,12 +69,14 @@ const map = L.map('map')
 .setView([55,60],4);
 
 
+
 L.tileLayer(
 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
 {
-attribution:'OpenStreetMap'
+attribution:'© OpenStreetMap'
 }
-).addTo(map);
+)
+.addTo(map);
 
 
 
@@ -91,60 +88,53 @@ function getWeather(lat,lon){
 
 
 fetch(
-`https://api.open-meteo.com/v1/forecast?
-latitude=${lat}
-&longitude=${lon}
-&hourly=
-temperature_2m,
-precipitation,
-windspeed_10m,
-surface_pressure
-`
-.replace(/\s/g,'')
+
+`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,windspeed_10m,surface_pressure`
+
 )
 
 
-.then(r=>r.json())
+.then(response=>response.json())
 
 
 .then(data=>{
 
 
-let t =
+let temp =
 data.hourly.temperature_2m[0];
+
 
 let rain =
 data.hourly.precipitation[0];
 
+
 let wind =
 data.hourly.windspeed_10m[0];
+
 
 let pressure =
 data.hourly.surface_pressure[0];
 
 
-document.getElementById("info").innerHTML =
 
-`
-<b>📍 Точка</b><br>
-Широта: ${lat.toFixed(2)}<br>
-Долгота: ${lon.toFixed(2)}
-<hr>
+let popup = `
+
+<b>🌦 Прогноз</b><br><br>
 
 🌡 Температура:
-${t} °C
+${temp} °C
 
-<br><br>
+<br>
 
 🌧 Осадки:
 ${rain} мм
 
-<br><br>
+<br>
 
 💨 Ветер:
 ${wind} км/ч
 
-<br><br>
+<br>
 
 ⬇ Давление:
 ${pressure} гПа
@@ -158,9 +148,12 @@ map.removeLayer(marker);
 }
 
 
-marker =
-L.marker([lat,lon])
-.addTo(map);
+
+marker = L.marker([lat,lon])
+.addTo(map)
+.bindPopup(popup)
+.openPopup();
+
 
 
 });
@@ -181,9 +174,7 @@ e.latlng.lng
 );
 
 
-}
-);
-
+});
 
 
 </script>
