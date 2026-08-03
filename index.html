@@ -1,682 +1,257 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-
-<title>Meteo Map</title>
-
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meteo Radar</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
 
-html,body{
-margin:0;
-height:100%;
-font-family:Arial;
+body{
+    background:#0b0b0b;
+    color:white;
+    overflow:hidden;
+    transition:.25s;
+}
+
+body.light{
+    background:#f4f4f4;
+    color:#111;
 }
 
 #map{
-height:100%;
+    width:100vw;
+    height:100vh;
 }
 
-
-#menuBtn{
-position:absolute;
-top:10px;
-right:10px;
-z-index:1000;
-
-background:#111;
-color:white;
-
-border:0;
-border-radius:10px;
-
-padding:10px;
-font-size:18px;
+.btn{
+    position:absolute;
+    width:55px;
+    height:55px;
+    border-radius:18px;
+    border:none;
+    background:rgba(30,30,30,.85);
+    backdrop-filter:blur(10px);
+    color:white;
+    font-size:22px;
+    cursor:pointer;
+    z-index:1000;
+    transition:.2s;
 }
 
+body.light .btn{
+    background:white;
+    color:black;
+}
+
+.btn:hover{
+    transform:scale(1.06);
+}
+
+#gps{
+    top:18px;
+    left:18px;
+}
+
+#settings{
+    top:88px;
+    left:18px;
+}
+
+#search{
+    top:18px;
+    right:18px;
+}
+
+#layers{
+    right:18px;
+    top:50%;
+    transform:translateY(-50%);
+}
+
+#timeline{
+    position:absolute;
+    left:50%;
+    bottom:20px;
+    transform:translateX(-50%);
+    width:70%;
+    max-width:650px;
+    background:rgba(30,30,30,.88);
+    padding:18px;
+    border-radius:18px;
+    z-index:1000;
+    backdrop-filter:blur(12px);
+}
+
+body.light #timeline{
+    background:white;
+}
+
+#timeline label{
+    display:block;
+    text-align:center;
+    margin-bottom:10px;
+    font-weight:bold;
+}
+
+input[type=range]{
+    width:100%;
+}
 
 .panel{
-position:absolute;
-top:55px;
-right:10px;
-z-index:999;
-
-background:#111;
-color:white;
-
-padding:12px;
-border-radius:12px;
-
-width:180px;
+    position:absolute;
+    top:0;
+    right:-310px;
+    width:300px;
+    height:100%;
+    background:#161616;
+    transition:.3s;
+    z-index:2000;
+    padding:20px;
 }
 
-
-.hidden{
-display:none;
+body.light .panel{
+    background:#ffffff;
 }
 
-
-button{
-
-width:100%;
-margin-top:7px;
-
-padding:8px;
-
-border:0;
-border-radius:8px;
-
+.panel.open{
+    right:0;
 }
 
-
-.timeline{
-
-position:absolute;
-bottom:20px;
-
-left:50%;
-transform:translateX(-50%);
-
-z-index:999;
-
-background:#111;
-color:white;
-
-padding:12px;
-
-border-radius:15px;
-
-width:80%;
-max-width:500px;
-
-text-align:center;
-
+.panel h2{
+    margin-bottom:20px;
 }
 
-
-input{
-width:100%;
+.panel button{
+    width:100%;
+    margin-bottom:12px;
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
 }
-
-
-#windCanvas{
-
-position:absolute;
-top:0;
-left:0;
-
-z-index:500;
-
-pointer-events:none;
-
-}
-
 </style>
-
 </head>
-
-
 <body>
-
-
-<button id="menuBtn">☰</button>
-
-
-<div class="panel" id="panel">
-
-<b>🌦 Meteo</b>
-
-
-<button onclick="toggleRain()">
-🌧 Осадки
-</button>
-
-
-<button onclick="toggleClouds()">
-☁ Облака
-</button>
-
-
-<button onclick="toggleTemp()">
-🌡 Температура
-</button>
-
-
-<button onclick="toggleWindLayer()">
-💨 Слой ветра
-</button>
-
-
-<button onclick="toggleParticles()">
-🌬 Частицы ветра
-</button>
-
-
-</div>
-
-
-
-<div class="timeline">
-
-<div id="timeText">
-Сейчас
-</div>
-
-<input 
-type="range"
-id="timeSlider"
-min="0"
-max="24"
-step="3"
-value="0">
-
-</div>
-
 
 <div id="map"></div>
 
+<button class="btn" id="gps">📍</button>
+
+<button class="btn" id="settings">⚙️</button>
+
+<button class="btn" id="search">🔍</button>
+
+<button class="btn" id="layers">◀</button>
+
+<div id="timeline">
+<label>Время</label>
+<input type="range" min="0" max="24" value="0">
+</div>
+
+<div class="panel" id="layerPanel">
+<h2>Прогнозные слои</h2>
+
+<button>Осадки</button>
+<button>Грозы</button>
+<button>Температура</button>
+<button>Ветер</button>
+<button>Облачность</button>
+
+</div>
+
+<div class="panel" id="settingsPanel">
+
+<h2>Настройки</h2>
+
+<button id="darkTheme">🌙 Темная тема</button>
+
+<button id="lightTheme">☀ Светлая тема</button>
+
+</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-
 <script>
 
+const map = L.map('map').setView([54.7388,55.9721],6);
 
-const API_KEY="b5fd8a2df3a6857059b351884cf1d26b";
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:19
+}).addTo(map);
 
+// Геолокация
 
-const map=L.map("map")
-.setView([55,60],4);
+document.getElementById("gps").onclick=()=>{
 
+navigator.geolocation.getCurrentPosition(pos=>{
 
+const lat=pos.coords.latitude;
+const lon=pos.coords.longitude;
 
-L.tileLayer(
-"https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-)
-.addTo(map);
+map.setView([lat,lon],12);
 
+L.marker([lat,lon]).addTo(map);
 
-
-let rainLayer;
-let cloudLayer;
-let tempLayer;
-let windLayer;
-
-
-let marker=null;
-
-
-let forecast=null;
-
-
-let selectedHour=0;
-
-
-document.getElementById("menuBtn")
-.onclick=function(){
-
-document.getElementById("panel")
-.classList.toggle("hidden");
+});
 
 };
 
+// Панель слоев
 
+const layerPanel=document.getElementById("layerPanel");
 
+document.getElementById("layers").onclick=()=>{
 
+layerPanel.classList.toggle("open");
 
-function updatePopup(){
-
-
-if(!forecast || !marker)
-return;
-
-
-
-let item=forecast.list[selectedHour/3];
-
-
-let date=new Date(item.dt*1000);
-
-
-
-let text=`
-
-<b>📍 ${forecast.city.name}</b>
-
-<br><br>
-
-🕒 ${date.toLocaleString("ru-RU")}
-
-<br><br>
-
-🌡 ${item.main.temp} °C
-
-<br>
-
-☁ ${item.weather[0].description}
-
-<br>
-
-🌧 Вероятность осадков:
-${Math.round(item.pop*100)}%
-
-<br>
-
-💧 Влажность:
-${item.main.humidity}%
-
-<br>
-
-💨 Ветер:
-${item.wind.speed} м/с
-
-<br>
-
-⬇ Давление:
-${item.main.pressure} гПа
-
-`;
-
-
-
-marker.setPopupContent(text);
-
-}
-
-
-
-
-
-document.getElementById("timeSlider")
-.oninput=function(){
-
-
-selectedHour=Number(this.value);
-
-
-document.getElementById("timeText")
-.innerHTML=
-
-selectedHour==0
-?
-"Сейчас"
-:
-"+"+selectedHour+" часов";
-
-
-updatePopup();
-
+settingsPanel.classList.remove("open");
 
 };
 
+// Настройки
 
+const settingsPanel=document.getElementById("settingsPanel");
 
+document.getElementById("settings").onclick=()=>{
 
+settingsPanel.classList.toggle("open");
 
-map.on("click",function(e){
+layerPanel.classList.remove("open");
 
+};
 
-let lat=e.latlng.lat;
-let lon=e.latlng.lng;
+// Темы
 
+document.getElementById("darkTheme").onclick=()=>{
 
-fetch(
+document.body.classList.remove("light");
 
-`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=ru&appid=${API_KEY}`
+};
 
-)
+document.getElementById("lightTheme").onclick=()=>{
 
-.then(r=>r.json())
+document.body.classList.add("light");
 
-.then(data=>{
+};
 
+// Поиск (заглушка)
 
-forecast=data;
+document.getElementById("search").onclick=()=>{
 
+alert("Поиск городов будет добавлен позже.");
 
-if(marker)
-map.removeLayer(marker);
+};
 
+</script>
 
-
-marker=L.marker([lat,lon])
-.addTo(map);
-
-
-marker.bindPopup("Загрузка...");
-
-
-marker.openPopup();
-
-
-
-updatePopup();
-
-
-
-});
-
-});
-  // =======================
-// СЛОИ OPENWEATHER
-// =======================
-
-
-function toggleRain(){
-
-if(rainLayer){
-
-map.removeLayer(rainLayer);
-rainLayer=null;
-
-}
-
-else{
-
-rainLayer=L.tileLayer(
-
-`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
-
-{
-opacity:0.9
-}
-
-).addTo(map);
-
-}
-
-}
-
-
-
-
-function toggleClouds(){
-
-if(cloudLayer){
-
-map.removeLayer(cloudLayer);
-cloudLayer=null;
-
-}
-
-else{
-
-cloudLayer=L.tileLayer(
-
-`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
-
-{
-opacity:0.8
-}
-
-).addTo(map);
-
-}
-
-}
-
-
-
-
-
-function toggleTemp(){
-
-if(tempLayer){
-
-map.removeLayer(tempLayer);
-tempLayer=null;
-
-}
-
-else{
-
-tempLayer=L.tileLayer(
-
-`https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
-
-{
-opacity:0.8
-}
-
-).addTo(map);
-
-}
-
-}
-
-
-
-
-function toggleWindLayer(){
-
-if(windLayer){
-
-map.removeLayer(windLayer);
-windLayer=null;
-
-}
-
-else{
-
-windLayer=L.tileLayer(
-
-`https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${API_KEY}`,
-
-{
-opacity:0.8
-}
-
-).addTo(map);
-
-}
-
-}
-
-
-
-
-
-// =======================
-// ЧАСТИЦЫ ВЕТРА
-// =======================
-
-
-let windParticles=[];
-
-let windActive=false;
-
-let windCanvas;
-
-let windCtx;
-
-let windAnimation;
-
-
-
-function toggleParticles(){
-
-
-if(windActive){
-
-windActive=false;
-
-
-cancelAnimationFrame(windAnimation);
-
-
-if(windCanvas){
-
-windCanvas.remove();
-
-windCanvas=null;
-
-}
-
-
-return;
-
-}
-
-
-
-windActive=true;
-
-
-windCanvas=document.createElement("canvas");
-
-
-windCanvas.id="windCanvas";
-
-
-document.body.appendChild(windCanvas);
-
-
-
-windCtx=windCanvas.getContext("2d");
-
-
-
-resizeWind();
-
-
-
-windParticles=[];
-
-
-
-for(let i=0;i<350;i++){
-
-
-windParticles.push({
-
-x:Math.random()*window.innerWidth,
-
-y:Math.random()*window.innerHeight,
-
-speed:1+Math.random()*3,
-
-length:5+Math.random()*15
-
-});
-
-
-}
-
-
-
-animateWind();
-
-
-
-}
-
-
-
-
-function resizeWind(){
-
-if(!windCanvas)
-return;
-
-
-windCanvas.width=window.innerWidth;
-
-windCanvas.height=window.innerHeight;
-
-
-}
-
-
-
-
-window.addEventListener(
-"resize",
-resizeWind
-);
-
-
-
-
-
-function animateWind(){
-
-
-if(!windActive)
-return;
-
-
-
-windCtx.clearRect(
-
-0,
-0,
-windCanvas.width,
-windCanvas.height
-
-);
-
-
-
-windCtx.strokeStyle="white";
-
-windCtx.globalAlpha=0.45;
-
-
-
-windParticles.forEach(p=>{
-
-
-windCtx.beginPath();
-
-
-windCtx.moveTo(
-p.x,
-p.y
-);
-
-
-
-p.x+=p.speed;
-
-
-
-windCtx.lineTo(
-
-p.x+p.length,
-
-p.y
-
-);
-
-
-
-windCtx.stroke();
-
-
-
-if(p.x>windCanvas.width+30){
-
-
-p.x=-30;
-
-
-p.y=Math.random()*windCanvas.height;
-
-
-}
-
-
-
-});
-
-
-
-windAnimation=requestAnimationFrame(
-animateWind
-);
-
-
-}
+</body>
+</html>
