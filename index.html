@@ -109,24 +109,32 @@ let rainLayer;
 
 function toggleRain(){
 
-
 if(rainLayer){
 
 map.removeLayer(rainLayer);
-
 rainLayer=null;
 
 }
 
 else{
 
+fetch('https://api.rainviewer.com/public/weather-maps.json')
+
+.then(r=>r.json())
+
+.then(data=>{
+
+let frames = data.radar.past;
+
+let latest = frames[frames.length-1];
+
 
 rainLayer = L.tileLayer(
 
-'https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=demo',
+`https://tilecache.rainviewer.com/v2/radar/${latest.path}/256/{z}/{x}/{y}/2/1_1.png`,
 
 {
-opacity:0.5
+opacity:0.6
 }
 
 );
@@ -134,9 +142,10 @@ opacity:0.5
 
 rainLayer.addTo(map);
 
+});
+
 
 }
-
 
 }
 
