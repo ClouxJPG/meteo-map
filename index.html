@@ -171,11 +171,15 @@ body.light .panel{
 <div class="panel" id="layerPanel">
 <h2>Прогнозные слои</h2>
 
-<button>Осадки</button>
-<button>Грозы</button>
-<button>Температура</button>
-<button>Ветер</button>
-<button>Облачность</button>
+<button onclick="showLayer('precipitation')">Осадки</button>
+
+<button onclick="alert('Грозовой слой пока отсутствует')">Грозы</button>
+
+<button onclick="showLayer('temperature')">Температура</button>
+
+<button onclick="showLayer('wind')">Ветер</button>
+
+<button onclick="showLayer('clouds')">Облачность</button>
 
 </div>
 
@@ -198,6 +202,49 @@ const map = L.map('map').setView([54.7388,55.9721],6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     maxZoom:19
 }).addTo(map);
+const weatherLayers = {
+
+    temperature: L.tileLayer(
+        'https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=b5fd8a2df3a6857059b351884cf1d26b',
+        {opacity:0.6}
+    ),
+
+    wind: L.tileLayer(
+        'https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=b5fd8a2df3a6857059b351884cf1d26b',
+        {opacity:0.6}
+    ),
+
+    clouds: L.tileLayer(
+        'https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=b5fd8a2df3a6857059b351884cf1d26b',
+        {opacity:0.6}
+    ),
+
+    pressure: L.tileLayer(
+        'https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=b5fd8a2df3a6857059b351884cf1d26b',
+        {opacity:0.6}
+    ),
+
+    precipitation: L.tileLayer(
+        'https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=b5fd8a2df3a6857059b351884cf1d26b',
+        {opacity:0.6}
+    )
+};
+
+let activeLayer = null;
+
+function showLayer(name){
+
+    if(activeLayer){
+        map.removeLayer(activeLayer);
+    }
+
+    activeLayer = weatherLayers[name];
+
+    if(activeLayer){
+        activeLayer.addTo(map);
+    }
+
+}    
 
 // Геолокация
 
