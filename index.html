@@ -206,7 +206,7 @@ const weatherLayers = {
 
     temperature: L.tileLayer(
         'https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=b5fd8a2df3a6857059b351884cf1d26b',
-        {opacity:0.6}
+        {opacity:1.0}
     ),
 
     wind: L.tileLayer(
@@ -317,6 +317,31 @@ alert("поиск городов в разработке.");
 
 };
 
+    map.on("click", async function(e){
+
+    const lat = e.latlng.lat.toFixed(4);
+    const lon = e.latlng.lng.toFixed(4);
+
+    const url =
+`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=b5fd8a2df3a6857059b351884cf1d26b&units=metric&lang=ru`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    L.popup()
+        .setLatLng(e.latlng)
+        .setContent(`
+<b>${data.name || "Неизвестное место"}</b><br>
+🌡 ${data.main.temp} °C<br>
+💧 ${data.main.humidity}%<br>
+🌬 ${data.wind.speed} м/с<br>
+☁ ${data.clouds.all}%<br>
+🌡 Давление: ${data.main.pressure} гПа
+`)
+        .openOn(map);
+
+});
+    
 </script>
 
 </body>
