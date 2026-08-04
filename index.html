@@ -154,7 +154,9 @@ body.light .panel{
 <body>
 
 <div id="map"></div>
-<div id="crosshair"></div>
+<div id="crosshair">
+    <span></span>
+</div>   
 
 <div id="layerInfo">
     Загрузка...
@@ -340,9 +342,7 @@ async function updateInfo(){
 
 map.on("moveend", updateInfo);
 
-updateInfo();    
 
-    map.on("click", async function(e){
 
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
