@@ -149,15 +149,78 @@ body.light .panel{
     border-radius:12px;
     cursor:pointer;
 }
+#crosshair{
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:42px;
+    height:42px;
+    z-index:3000;
+    pointer-events:none;
+}
+
+#crosshair::before,
+#crosshair::after{
+    content:"";
+    position:absolute;
+    background:white;
+}
+
+#crosshair::before{
+    width:2px;
+    height:42px;
+    left:20px;
+    top:0;
+}
+
+#crosshair::after{
+    width:42px;
+    height:2px;
+    left:0;
+    top:20px;
+}
+
+#crosshair span{
+    position:absolute;
+    width:8px;
+    height:8px;
+    border:2px solid white;
+    border-radius:50%;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    background:rgba(255,255,255,.2);
+}
+
+#layerInfo{
+    position:fixed;
+    top:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(20,20,20,.9);
+    color:white;
+    padding:10px 18px;
+    border-radius:15px;
+    z-index:4000;
+    font-weight:bold;
+    backdrop-filter:blur(12px);
+    min-width:250px;
+    text-align:center;
+}
+
+body.light #layerInfo{
+    background:white;
+    color:black;
+}    
 </style>
 </head>
 <body>
 
-<div id="map"></div>
+<div id="map"></>
 <div id="crosshair">
     <span></span>
-</div>   
-
+</div>
 <div id="layerInfo">
     Загрузка...
 </div>    
@@ -342,7 +405,9 @@ async function updateInfo(){
 
 map.on("moveend", updateInfo);
 
+updateInfo();    
 
+    map.on("click", async function(e){
 
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
