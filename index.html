@@ -154,6 +154,11 @@ body.light .panel{
 <body>
 
 <div id="map"></div>
+<div id="crosshair"></div>
+
+<div id="layerInfo">
+    Загрузка...
+</div>    
 
 <button class="btn" id="gps">📍</button>
 
@@ -316,6 +321,26 @@ document.getElementById("search").onclick=()=>{
 alert("поиск городов в разработке.");
 
 };
+async function updateInfo(){
+
+    const c = map.getCenter();
+
+    const url =
+`https://api.openweathermap.org/data/2.5/weather?lat=${c.lat}&lon=${c.lng}&appid=b5fd8a2df3a6857059b351884cf1d26b&units=metric&lang=ru`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    document.getElementById("layerInfo").innerHTML = `
+🌡 ${data.main.temp.toFixed(1)}°C
+💨 ${data.wind.speed} м/с
+☁ ${data.clouds.all}%
+`;
+}
+
+map.on("moveend", updateInfo);
+
+updateInfo();    
 
     map.on("click", async function(e){
 
