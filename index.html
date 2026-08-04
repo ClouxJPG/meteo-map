@@ -408,7 +408,9 @@ map.on("moveend", updateInfo);
 
 updateInfo();    
 
-
+map.on("click", async function(e){
+...
+});
 
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
