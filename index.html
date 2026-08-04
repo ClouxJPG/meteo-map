@@ -217,10 +217,11 @@ body.light #layerInfo{
 </head>
 <body>
 
-<div id="map"></>
+<div id="map"></div>
 <div id="crosshair">
     <span></span>
 </div>
+
 <div id="layerInfo">
     Загрузка...
 </div>    
@@ -407,7 +408,7 @@ map.on("moveend", updateInfo);
 
 updateInfo();    
 
-    
+
 
     const lat = e.latlng.lat.toFixed(4);
     const lon = e.latlng.lng.toFixed(4);
