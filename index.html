@@ -232,7 +232,7 @@ body.light #layerInfo{
 
 <button class="btn" id="search">🔍</button>
 
-<button class="btn" id="layers">⬅️</button>
+<button class="btn" id="layers">⬅️</button>  
 
 <div id="timeline">
 <label>Время</label>
@@ -251,6 +251,8 @@ body.light #layerInfo{
 <button onclick="showLayer('wind')">Ветер</button>
 
 <button onclick="showLayer('clouds')">Облачность</button>
+
+<button onclick="toggleLightning()">⚡ Молнии</button>    
 
 </div>
 
@@ -273,6 +275,55 @@ const map = L.map('map').setView([54.7388,55.9721],6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     maxZoom:19
 }).addTo(map);
+let lightningLayer = L.layerGroup().addTo(map);
+
+async function loadLightning() {
+    try {
+        const response = await fetch(
+            "https://data.lightningmaps.org/live/lightning.json"
+        );
+
+        const data = await response.json();
+
+        lightningLayer.clearLayers();
+
+        if (!Array.isArray(data)) return;
+
+        data.forEach(strike => {
+
+            L.circleMarker([strike.lat, strike.lon], {
+                radius: 4,
+                color: "#ffff00",
+                fillColor: "#ffcc00",
+                fillOpacity: 1
+            }).addTo(lightningLayer);
+
+        });
+
+    } catch(e) {
+        console.log("Ошибка молний:", e);
+    }
+}
+
+loadLightning();
+setInterval(loadLightning,30000); 
+let lightningVisible = true;
+
+function toggleLightning(){
+
+    if(lightningVisible){
+
+        map.removeLayer(lightningLayer);
+        lightningVisible = false;
+
+    } else {
+
+        map.addLayer(lightningLayer);
+        lightningVisible = true;
+
+    }
+
+}    
 const weatherLayers = {
 
     temperature: L.tileLayer(
