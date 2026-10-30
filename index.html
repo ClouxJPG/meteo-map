@@ -1,305 +1,1028 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#071321">
-<title>StormLab 3D — Volumetric Cloud Simulator</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#071522">
+<title>StormLab 3D — Atmospheric Simulator</title>
+
 <style>
-:root{color-scheme:dark;--bg:#071321;--panel:rgba(8,20,34,.82);--line:rgba(174,210,239,.18);--txt:#eaf4ff;--muted:#9bb2c8;--accent:#7ec8ff}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071321;color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-#stage{position:fixed;inset:0;touch-action:none}canvas{display:block;width:100%;height:100%}
-#top{position:fixed;z-index:3;left:14px;right:14px;top:calc(12px + env(safe-area-inset-top));display:flex;align-items:flex-start;justify-content:space-between;gap:10px;pointer-events:none}
-.brand,.status,.panel,.hint{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 8px 32px #0003}
-.brand{padding:10px 13px;border-radius:14px;pointer-events:auto}.brand strong{display:block;font-size:13px;letter-spacing:.16em}.brand small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
-.status{padding:9px 11px;border-radius:12px;font-size:11px;color:#cfe6f8;pointer-events:auto}
-#controls{position:fixed;z-index:4;right:14px;top:88px;bottom:14px;width:min(310px,calc(100vw - 28px));overflow:auto;padding:13px;border-radius:18px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 12px 40px #0005;overscroll-behavior:contain}
-#controls h2{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:#b9d7ef;margin:2px 0 12px}
-.section{padding:11px 0;border-top:1px solid var(--line)}.section:first-of-type{border-top:0}
-.row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 5px}.row label{font-size:12px;color:#d8e8f6}.val{font-size:11px;color:var(--accent);font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:#83caff;height:24px;margin:0;cursor:pointer}
-button,select{font:inherit;color:var(--txt);background:#142b40;border:1px solid #38536b;border-radius:10px;padding:9px 10px;font-size:11px}
-button{cursor:pointer}button:active{transform:translateY(1px)}button.active{background:#245477;border-color:#83caff}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.grid button{min-height:36px}
-select{width:100%;margin-top:5px}
-.toggle{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#d8e8f6;margin:7px 0}
-.toggle input{accent-color:#83caff;width:17px;height:17px}
-#hint{position:fixed;z-index:2;left:14px;bottom:14px;max-width:min(390px,calc(100vw - 350px));padding:10px 12px;border-radius:12px;font-size:11px;line-height:1.45;color:#c3d8e9}
-#crosshair{position:fixed;z-index:1;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:#d8efff66;transform:translate(-50%,-50%);pointer-events:none}
-#mobileToggle{display:none;position:fixed;z-index:5;right:14px;top:calc(62px + env(safe-area-inset-top));}
-#loading{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#071321;transition:opacity .5s}
-.loader{width:min(320px,80vw);text-align:center}.loader strong{letter-spacing:.2em;font-size:13px}.bar{height:3px;background:#19344b;margin-top:16px;overflow:hidden;border-radius:9px}.bar i{display:block;height:100%;width:35%;background:#8bd0ff;animation:load 1.2s infinite ease-in-out}@keyframes load{from{transform:translateX(-120%)}to{transform:translateX(330%)}}
-@media(max-width:700px){#controls{top:auto;left:10px;right:10px;bottom:10px;width:auto;max-height:48vh;padding:11px;border-radius:16px}#controls.collapsed{display:none}#mobileToggle{display:block}#hint{left:10px;bottom:calc(48vh + 20px);max-width:calc(100vw - 20px);font-size:10px}.brand{padding:8px 10px}.status{font-size:10px;padding:8px}}
-@media(min-width:701px){#controls{width:300px}#hint{max-width:calc(100vw - 350px)}}
+*{box-sizing:border-box}
+html,body{
+ margin:0;width:100%;height:100%;overflow:hidden;
+ background:#071522;color:#eaf5ff;
+ font-family:Arial,system-ui,sans-serif;
+}
+#stage{position:fixed;inset:0;touch-action:none}
+canvas{width:100%;height:100%;display:block}
+#top{
+ position:fixed;top:12px;left:12px;right:12px;
+ display:flex;justify-content:space-between;
+ pointer-events:none;z-index:5;gap:10px
+}
+.brand,.status,.panel,.hint{
+ background:rgba(7,20,34,.84);
+ border:1px solid #ffffff20;
+ backdrop-filter:blur(15px);
+ -webkit-backdrop-filter:blur(15px);
+}
+.brand{padding:11px 14px;border-radius:12px}
+.brand b{font-size:14px;letter-spacing:3px}
+.brand small{display:block;color:#91aec5;font-size:9px;margin-top:4px}
+.status{padding:10px;border-radius:10px;font-size:11px}
+.panel{
+ position:fixed;z-index:6;right:12px;top:75px;bottom:12px;
+ width:290px;overflow:auto;border-radius:15px;padding:13px;
+}
+h3{font-size:11px;letter-spacing:2px;color:#a9c9e3}
+.section{border-top:1px solid #ffffff17;padding:10px 0}
+.row{display:flex;justify-content:space-between;align-items:center;margin:7px 0}
+label{font-size:12px;color:#d4e5f3}
+.val{font-size:11px;color:#7bcaff}
+input[type=range]{width:100%;accent-color:#76c6ff}
+select,button{
+ background:#142e43;color:white;border:1px solid #38566d;
+ border-radius:8px;padding:9px;font-size:11px;
+}
+select{width:100%}
+button{cursor:pointer}
+button:active{transform:scale(.98)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.toggle{display:flex;justify-content:space-between;margin:10px 0;font-size:12px}
+.toggle input{accent-color:#77caff}
+#hint{
+ position:fixed;left:12px;bottom:12px;z-index:4;
+ padding:10px 12px;border-radius:10px;
+ color:#c2d8e9;font-size:10px;line-height:1.5;
+ max-width:calc(100% - 330px)
+}
+#mobile{
+ display:none;position:fixed;right:12px;top:65px;z-index:8
+}
+#loading{
+ position:fixed;inset:0;background:#071522;
+ z-index:20;display:grid;place-items:center;
+ transition:opacity .5s
+}
+#loading b{letter-spacing:4px}
+#error{
+ display:none;position:fixed;z-index:30;inset:15px;
+ background:#1a1010;color:#fff;padding:20px;
+ border:1px solid #f66;border-radius:12px;
+ white-space:pre-wrap;overflow:auto
+}
+@media(max-width:700px){
+ .panel{
+  top:auto;left:9px;right:9px;bottom:9px;
+  width:auto;max-height:46vh;padding:11px
+ }
+ .panel.hidden{display:none}
+ #mobile{display:block}
+ #hint{bottom:calc(46vh + 17px);left:10px;max-width:95%}
+ .brand{padding:8px 10px}
+}
 </style>
 </head>
-<body>
-<div id="stage"></div><div id="crosshair"></div>
-<div id="loading"><div class="loader"><strong>STORMLAB 3D</strong><div style="color:#8da9c0;font-size:11px;margin-top:8px">ИНИЦИАЛИЗАЦИЯ ОБЪЁМНОЙ АТМОСФЕРЫ</div><div class="bar"><i></i></div></div></div>
-<div id="top"><div class="brand"><strong>STORMLAB <span style="color:#80caff">3D</span></strong><small>VOLUMETRIC ATMOSPHERE LAB</small></div><div class="status" id="status">ИНИЦИАЛИЗАЦИЯ · WEBGL</div></div>
-<button id="mobileToggle">ПАНЕЛЬ</button>
-<aside id="controls">
-<h2>Параметры симуляции</h2>
-<div class="section">
-<div class="row"><label>Сценарий атмосферы</label></div>
-<select id="preset"><option value="severe">Severe convection · грозовой кластер</option><option value="supercell">Isolated supercell · суперячейка</option><option value="towering">Towering cumulus · мощные башни</option><option value="stratus">Stratocumulus · слоисто-кучевые</option><option value="mixed">Mixed field · смешанная облачность</option></select>
-</div>
-<div class="section">
-<div class="row"><label for="density">Оптическая плотность</label><span class="val" id="densityVal">1.00</span></div><input id="density" type="range" min=".35" max="2.2" step=".01" value="1">
-<div class="row"><label for="coverage">Облачное покрытие</label><span class="val" id="coverageVal">78%</span></div><input id="coverage" type="range" min="15" max="100" step="1" value="78">
-<div class="row"><label for="detail">Детализация структуры</label><span class="val" id="detailVal">Высокая</span></div><input id="detail" type="range" min="1" max="3" step="1" value="2">
-</div>
-<div class="section">
-<div class="row"><label for="wind">Ветер на высоте</label><span class="val" id="windVal">18 м/с</span></div><input id="wind" type="range" min="0" max="55" step="1" value="18">
-<div class="row"><label for="sun">Положение солнца</label><span class="val" id="sunVal">32°</span></div><input id="sun" type="range" min="5" max="85" step="1" value="32">
-<div class="row"><label for="growth">Интенсивность конвекции</label><span class="val" id="growthVal">65%</span></div><input id="growth" type="range" min="0" max="100" step="1" value="65">
-</div>
-<div class="section">
-<div class="grid">
-<button id="pause">Ⅱ Пауза</button><button id="reset">↺ Сброс камеры</button>
-<button id="lightning">⚡ Молния</button><button id="wire">◇ Научный режим</button>
-</div>
-<label class="toggle"><span>Анимация облачных структур</span><input id="animate" type="checkbox" checked></label>
-<label class="toggle"><span>Показывать высотную шкалу</span><input id="scale" type="checkbox" checked></label>
-</div>
-<div class="section" style="font-size:10px;line-height:1.5;color:#91a9bd">Модель процедурная: форма, плотность и освещение рассчитываются в объёмном шейдере. Это визуальная симуляция, а не прогноз погоды или CFD-модель атмосферы.</div>
-</aside>
-<div id="hint" class="hint">Перетаскивание — вращение камеры · колесо / щипок — масштаб · правый клик или два пальца — панорама. На телефоне панель можно свернуть.</div>
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
-</script>
-<script type="module">
-import * as THREE from 'three';
 
-const stage=document.getElementById('stage');
-const statusEl=document.getElementById('status');
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+<body>
+<div id="stage"></div>
+<div id="error"></div>
+
+<div id="loading">
+ <div style="text-align:center">
+  <b>STORMLAB 3D</b>
+  <div style="font-size:10px;color:#8caac0;margin-top:9px">
+   INITIALIZING ATMOSPHERE
+  </div>
+ </div>
+</div>
+
+<div id="top">
+ <div class="brand">
+  <b>STORMLAB <span style="color:#76caff">3D</span></b>
+  <small>VOLUMETRIC ATMOSPHERIC SIMULATOR</small>
+ </div>
+ <div class="status" id="fps">STARTING GPU</div>
+</div>
+
+<button id="mobile">ПАНЕЛЬ</button>
+
+<div class="panel" id="panel">
+ <h3>ATMOSPHERIC PARAMETERS</h3>
+
+ <div class="section">
+  <label>Сценарий облачности</label>
+  <select id="preset">
+   <option value="severe">Severe convection</option>
+   <option value="supercell">Supercell environment</option>
+   <option value="tower">Towering cumulus</option>
+   <option value="mixed">Mixed cloud field</option>
+   <option value="stratus">Stratocumulus</option>
+  </select>
+ </div>
+
+ <div class="section">
+  <div class="row">
+   <label>Плотность облаков</label>
+   <span class="val" id="densityV">1.00</span>
+  </div>
+  <input id="density" type="range" min=".3" max="2" step=".01" value="1">
+
+  <div class="row">
+   <label>Покрытие неба</label>
+   <span class="val" id="coverageV">75%</span>
+  </div>
+  <input id="coverage" type="range" min="15" max="100" value="75">
+
+  <div class="row">
+   <label>Детализация</label>
+   <span class="val" id="qualityV">2</span>
+  </div>
+  <input id="quality" type="range" min="1" max="3" value="2">
+ </div>
+
+ <div class="section">
+  <div class="row">
+   <label>Ветер</label>
+   <span class="val" id="windV">18 м/с</span>
+  </div>
+  <input id="wind" type="range" min="0" max="55" value="18">
+
+  <div class="row">
+   <label>Высота солнца</label>
+   <span class="val" id="sunV">35°</span>
+  </div>
+  <input id="sun" type="range" min="5" max="85" value="35">
+
+  <div class="row">
+   <label>Конвекция</label>
+   <span class="val" id="growthV">65%</span>
+  </div>
+  <input id="growth" type="range" min="0" max="100" value="65">
+ </div>
+
+ <div class="section">
+  <div class="grid">
+   <button id="pause">Ⅱ Пауза</button>
+   <button id="reset">↺ Камера</button>
+   <button id="lightning">⚡ Молния</button>
+   <button id="scientific">Научный режим</button>
+  </div>
+  <div class="toggle">
+   <span>Анимация</span>
+   <input id="animation" type="checkbox" checked>
+  </div>
+  <div class="toggle">
+   <span>Контуры высот</span>
+   <input id="contours" type="checkbox" checked>
+  </div>
+ </div>
+
+ <div class="section" style="font-size:10px;color:#91abc0;line-height:1.5">
+  Все объекты расположены в мировых координатах.
+  Поверхность имеет постоянный размер относительно
+  облаков. Изменение масштаба камеры не меняет
+  физические размеры объектов.
+ </div>
+</div>
+
+<div id="hint" class="hint">
+ Перетаскивание — вращение камеры · колесо — приближение.
+ Два пальца — масштабирование и панорамирование.
+</div>
+
+<script type="importmap">
+{
+ "imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+ }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+
+const errorBox=document.getElementById("error");
+
+function showError(message){
+ errorBox.style.display="block";
+ errorBox.textContent="STORMLAB ERROR\n\n"+message;
+}
+
+let renderer;
+
+try{
+ renderer=new THREE.WebGLRenderer({
+  antialias:true,
+  powerPreference:"high-performance"
+ });
+}catch(e){
+ showError("WebGL не поддерживается или недоступен.\n"+e);
+ throw e;
+}
+
+const stage=document.getElementById("stage");
+
+const mobile=innerWidth<700;
+
+renderer.setPixelRatio(
+ Math.min(devicePixelRatio,mobile?.62:.85)
+);
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
+
 stage.appendChild(renderer.domElement);
+
 const scene=new THREE.Scene();
-const camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+const camera=new THREE.OrthographicCamera(
+ -1,1,1,-1,0,1
+);
+
 const uniforms={
- uResolution:{value:new THREE.Vector2(innerWidth,innerHeight)},
- uCamPos:{value:new THREE.Vector3(0,1900,8200)},
- uForward:{value:new THREE.Vector3(0,.12,-1).normalize()},
- uRight:{value:new THREE.Vector3(1,0,0)},
- uUp:{value:new THREE.Vector3(0,1,0)},
- uTanFov:{value:Math.tan(THREE.MathUtils.degToRad(54/2))},
- uTime:{value:0},uDensity:{value:1},uCoverage:{value:.78},uWind:{value:18},
- uSun:{value:32},uGrowth:{value:.65},uDetail:{value:2},uLightning:{value:0},
- uClouds:{value:Array.from({length:8},()=>new THREE.Vector4())},
- uMeta:{value:Array.from({length:8},()=>new THREE.Vector4())},
- uCloudCount:{value:8},uScientific:{value:0},uScale:{value:1}
+ resolution:{value:new THREE.Vector2(innerWidth,innerHeight)},
+
+ cam:{value:new THREE.Vector3(0,3600,10500)},
+ forward:{value:new THREE.Vector3(0,-.15,-1)},
+ right:{value:new THREE.Vector3(1,0,0)},
+ up:{value:new THREE.Vector3(0,1,0)},
+
+ zoom:{value:1},
+
+ time:{value:0},
+ density:{value:1},
+ coverage:{value:.75},
+ wind:{value:18},
+ sun:{value:35},
+ growth:{value:.65},
+ quality:{value:2},
+ lightning:{value:0},
+ scientific:{value:0},
+ contours:{value:1},
+
+ cloudPos:{value:Array.from(
+  {length:6},()=>new THREE.Vector4()
+ )},
+
+ cloudData:{value:Array.from(
+  {length:6},()=>new THREE.Vector4()
+ )}
 };
-const vertex=`
+
+const vertexShader=`
 varying vec2 vUv;
-void main(){vUv=uv;gl_Position=vec4(position,1.0);}
+
+void main(){
+ vUv=uv;
+ gl_Position=vec4(position,1.0);
+}
 `;
-const fragment=`
+
+const fragmentShader=`
 precision highp float;
+
 varying vec2 vUv;
-uniform vec2 uResolution;
-uniform vec3 uCamPos,uForward,uRight,uUp;
-uniform float uTanFov,uTime,uDensity,uCoverage,uWind,uSun,uGrowth,uDetail,uLightning,uScientific,uScale;
-uniform vec4 uClouds[8],uMeta[8];
-uniform int uCloudCount;
-#define PI 3.14159265359
-float hash31(vec3 p){p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);}
-float noise3(vec3 x){
- vec3 i=floor(x),f=fract(x);f=f*f*(3.0-2.0*f);
- return mix(mix(mix(hash31(i),hash31(i+vec3(1,0,0)),f.x),mix(hash31(i+vec3(0,1,0)),hash31(i+vec3(1,1,0)),f.x),f.y),
- mix(mix(hash31(i+vec3(0,0,1)),hash31(i+vec3(1,0,1)),f.x),mix(hash31(i+vec3(0,1,1)),hash31(i+vec3(1,1,1)),f.x),f.y),f.z);
+
+uniform vec2 resolution;
+uniform vec3 cam,forward,right,up;
+
+uniform float zoom;
+uniform float time;
+uniform float density;
+uniform float coverage;
+uniform float wind;
+uniform float sun;
+uniform float growth;
+uniform float quality;
+uniform float lightning;
+uniform float scientific;
+uniform float contours;
+
+uniform vec4 cloudPos[6];
+uniform vec4 cloudData[6];
+
+float hash(vec3 p){
+ p=fract(p*.1031);
+ p+=dot(p,p.yzx+33.33);
+ return fract((p.x+p.y)*p.z);
 }
+
+float noise(vec3 p){
+ vec3 i=floor(p);
+ vec3 f=fract(p);
+
+ f=f*f*(3.-2.*f);
+
+ return mix(
+  mix(
+   mix(hash(i),hash(i+vec3(1,0,0)),f.x),
+   mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),
+   f.y
+  ),
+  mix(
+   mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),
+   mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),
+   f.y
+  ),
+  f.z
+ );
+}
+
 float fbm(vec3 p){
- float a=.55,v=0.;for(int i=0;i<4;i++){v+=noise3(p)*a;p=p*2.03+vec3(17.1,9.2,13.7);a*=.5;}return v;
+ float n=noise(p)*.65;
+ n+=noise(p*2.02+13.7)*.35;
+ return n;
 }
-float cloudOne(vec3 p,vec4 c,vec4 m){
- float h=(p.y-c.z)/max(1.,c.w-c.z);if(h<0.||h>1.08)return 0.;
- float type=m.x,rad=m.y,seed=m.z,wind=m.w;
+
+// Fixed world-space cloud geometry.
+// Camera zoom never changes cloud dimensions.
+float cloudDensity(vec3 p,int index){
+
+ vec4 c=cloudPos[index];
+ vec4 d=cloudData[index];
+
  vec2 q=p.xz-c.xy;
- float drift=wind*(h*h)*.55;
- q.x-=drift;
- float broad=length(q)/rad;
- float vertical= smoothstep(0.,.09,h)*(1.-smoothstep(.91,1.08,h));
- float edge=0.;
+
+ float h=(p.y-c.z)/max(1.,c.w-c.z);
+
+ if(h<0. || h>1.04)return 0.;
+
+ float type=d.x;
+ float radius=d.y;
+ float seed=d.z;
+
+ float heightShape=
+ smoothstep(0.,.07,h)*
+ (1.-smoothstep(.91,1.04,h));
+
+ float radial=length(q)/radius;
+
+ float shape=0.;
+
  if(type<.5){
-   float width=mix(.9,.38,h)+.08*sin(h*9.+seed);
-   edge=1.-length(q)/(rad*width);
+
+  float width=mix(.95,.45,h);
+
+  shape=1.-radial/width;
+
  }else if(type<1.5){
-   float width=mix(.82,.42,h);
-   float base=1.-length(q)/(rad*width);
-   float towers=0.;
-   for(int k=0;k<5;k++){
-     float a=float(k)*1.256+seed;
-     vec2 center=vec2(cos(a),sin(a))*.27*rad;
-     float tr=rad*(.22+.08*sin(float(k)*4.1+seed));
-     float tw=1.-length(q-center)/tr;
-     tw*=smoothstep(.12,.3,h)*(1.-smoothstep(.82,1.,h));
-     towers=max(towers,tw);
-   }
-   float anvilH=smoothstep(.68,.84,h);
-   float anvil=1.-length(vec2(q.x/(rad*1.9),(q.y+rad*.10)/(rad*.64)));
-   anvil*=anvilH*(1.-smoothstep(.94,1.06,h));
-   edge=max(base*.74,max(towers,anvil*.8));
+
+  float width=mix(.92,.39,h);
+
+  float body=1.-radial/width;
+
+  float tower=0.;
+
+  for(int k=0;k<4;k++){
+
+   float a=float(k)*1.57+seed;
+
+   vec2 offset=vec2(cos(a),sin(a))*radius*.25;
+
+   float t=1.-length(q-offset)/(radius*.24);
+
+   tower=max(tower,t);
+  }
+
+  float anvilHeight=smoothstep(.66,.83,h);
+
+  float anvil=
+   1.-length(vec2(
+    q.x/(radius*1.8),
+    q.y/(radius*.7)
+   ));
+
+  shape=max(
+   body*.72,
+   max(
+    tower*smoothstep(.1,.3,h),
+    anvil*anvilHeight
+   )
+  );
+
  }else{
-   float width=mix(1.15,.9,h);
-   edge=1.-length(q)/(rad*width);
-   vertical=smoothstep(0.,.04,h)*(1.-smoothstep(.7,.95,h));
+
+  shape=1.-radial/1.1;
  }
- if(edge < -0.28)return 0.;
- vec3 np=vec3(p.x*.0026,p.y*.0034,p.z*.0026)+vec3(seed*3.7,uTime*.012*uWind/18.,seed*1.9);
- float coarse=fbm(np);
- float fine=fbm(np*2.7+vec3(4.2,1.3,8.1));
- float erosion=(coarse-.48)*.72+(fine-.5)*.22;
- float growthBoost=type>0.5&&type<1.5?uGrowth*.25:0.;
- float cover=(uCoverage-.5)*.35;
- float d=(edge+erosion+growthBoost+cover-.12)*vertical;
- d*=uDensity;
- d*=smoothstep(.02,.28,edge+erosion+.18);
- return clamp(d,0.,1.35);
+
+ if(shape<-.3)return 0.;
+
+ vec3 np=vec3(
+  p.x*.0027,
+  p.y*.0032,
+  p.z*.0027
+ );
+
+ np+=vec3(seed*3.,time*.009*wind/18.,seed*2.);
+
+ float n=fbm(np);
+
+ float fine=noise(np*3.1+7.);
+
+ float erosion=(n-.48)*.65+(fine-.5)*.17;
+
+ float convective=type>.5&&type<1.5
+  ?growth*.22:0.;
+
+ float cover=(coverage-.5)*.3;
+
+ float result=shape+erosion+convective+cover-.13;
+
+ result*=heightShape;
+ result*=density;
+
+ return clamp(result,0.,1.2);
 }
-float densityAt(vec3 p){
- float d=0.;
- for(int i=0;i<8;i++){if(i<uCloudCount){float x=cloudOne(p,uClouds[i],uMeta[i]);d=1.-(1.-d)*(1.-x*.88);}}
- return d;
+
+float totalDensity(vec3 p){
+
+ float result=0.;
+
+ for(int i=0;i<6;i++){
+
+  float d=cloudDensity(p,i);
+
+  result=1.-(1.-result)*(1.-d*.85);
+ }
+
+ return result;
 }
-vec2 boxHit(vec3 ro,vec3 rd,vec3 bmin,vec3 bmax){
- vec3 inv=1./rd;vec3 t0=(bmin-ro)*inv;vec3 t1=(bmax-ro)*inv;
- vec3 lo=min(t0,t1),hi=max(t0,t1);
- float a=max(max(lo.x,lo.y),lo.z),b=min(min(hi.x,hi.y),hi.z);
- return vec2(a,b);
+
+// Huge fixed ground surface.
+float groundHeight(vec2 p){
+
+ return
+  sin(p.x*.00035)*45.+
+  sin(p.y*.00042)*36.+
+  noise(vec3(p.x*.0003,0.,p.y*.0003))*75.;
 }
-vec3 sky(vec3 rd){
+
+vec3 skyColor(vec3 rd){
+
  float h=max(rd.y,0.);
- vec3 horizon=vec3(.68,.79,.88),zenith=vec3(.12,.39,.68);
- vec3 col=mix(horizon,zenith,pow(h,.62));
- float sunDot=max(dot(rd,normalize(vec3(-.55,sin(radians(uSun)),.55))),0.);
- col+=vec3(1.,.78,.53)*pow(sunDot,180.)*.9;
- col+=vec3(.42,.58,.72)*pow(sunDot,8.)*.11;
- if(rd.y<0.)col=mix(col,vec3(.035,.075,.105),clamp(-rd.y*3.,0.,1.));
+
+ vec3 horizon=vec3(.72,.81,.88);
+ vec3 zenith=vec3(.13,.39,.68);
+
+ vec3 col=mix(horizon,zenith,pow(h,.65));
+
+ vec3 sunDir=normalize(vec3(
+  -.55,
+  sin(radians(sun)),
+  .65
+ ));
+
+ float s=max(dot(rd,sunDir),0.);
+
+ col+=vec3(1.,.8,.58)*pow(s,170.)*.9;
+ col+=vec3(.55,.69,.85)*pow(s,9.)*.1;
+
+ if(rd.y<0.){
+  col=mix(
+   col,
+   vec3(.12,.17,.19),
+   clamp(-rd.y*3.,0.,1.)
+  );
+ }
+
  return col;
 }
+
+vec3 groundColor(vec3 p){
+
+ float n=noise(vec3(p.x*.001,0.,p.z*.001));
+ float fine=noise(vec3(p.x*.009,1.,p.z*.009));
+
+ vec3 grass=mix(
+  vec3(.13,.19,.15),
+  vec3(.27,.31,.23),
+  n
+ );
+
+ grass+=fine*.035;
+
+ float contour=0.;
+
+ if(contours>.5){
+  float h=groundHeight(p.xz);
+  contour=1.-smoothstep(0.,2.5,abs(mod(h+500.,100.)-50.));
+ }
+
+ grass=mix(grass,vec3(.37,.43,.42),contour*.12);
+
+ return grass;
+}
+
 void main(){
- vec2 uv=vUv*2.-1.;uv.x*=uResolution.x/uResolution.y;
- vec3 rd=normalize(uForward+uRight*uv.x*uTanFov+uUp*uv.y*uTanFov);
- vec3 col=sky(rd);
- vec2 hit=boxHit(uCamPos,rd,vec3(-7200.,250.,-7200.),vec3(7200.,10500.,7200.));
- float t=max(hit.x,0.),endT=min(hit.y,15000.);
- if(endT>t){
-   int steps=uDetail<1.5?40:(uDetail<2.5?58:82);
-   float stepLen=(endT-t)/float(steps);
-   float trans=1.;vec3 cloudCol=vec3(0.);
-   vec3 sunDir=normalize(vec3(-.55,sin(radians(uSun)),.55));
-   for(int i=0;i<104;i++){
-     if(i>=steps||trans<.012)break;
-     vec3 p=uCamPos+rd*(t+(float(i)+.5)*stepLen);
-     if(p.y>250.&&p.y<10500.){
-       float den=densityAt(p);
-       if(den>.012){
-         float light=0.;
-         for(int j=0;j<3;j++){vec3 sp=p+sunDir*(180.+float(j)*230.);light+=densityAt(sp)*.33;}
-         float shadow=exp(-light*1.65);
-         float heightTint=smoothstep(400.,8500.,p.y);
-         vec3 base=mix(vec3(.34,.42,.49),vec3(.88,.92,.96),clamp(shadow*.8+.15,0.,1.));
-         base=mix(base,vec3(.76,.84,.91),heightTint*.35);
-         float phase=.72+.28*pow(max(dot(rd,sunDir),0.),3.);
-         vec3 lit=base*(.43+shadow*.72)*phase;
-         float alpha=1.-exp(-den*stepLen*.00115);
-         cloudCol+=trans*alpha*lit;
-         trans*=1.-alpha;
-       }
-     }
+
+ vec2 uv=vUv*2.-1.;
+
+ uv.x*=resolution.x/resolution.y;
+
+ vec3 rd=normalize(
+  forward+
+  right*uv.x*zoom+
+  up*uv.y*zoom
+ );
+
+ vec3 col=skyColor(rd);
+
+ // Ground intersection.
+ if(rd.y<-.0001){
+
+  float t=-cam.y/rd.y;
+
+  if(t>0. && t<50000.){
+
+   vec3 p=cam+rd*t;
+
+   float gh=groundHeight(p.xz);
+
+   p.y=gh;
+
+   float fog=exp(-t*.000075);
+
+   vec3 ground=groundColor(p);
+
+   col=mix(
+    col,
+    ground,
+    fog
+   );
+  }
+ }
+
+ // Cloud volume bounding region.
+ vec3 boxMin=vec3(-10000.,250.,-10000.);
+ vec3 boxMax=vec3(10000.,10500.,10000.);
+
+ vec3 inv=1./rd;
+
+ vec3 t0=(boxMin-cam)*inv;
+ vec3 t1=(boxMax-cam)*inv;
+
+ vec3 lo=min(t0,t1);
+ vec3 hi=max(t0,t1);
+
+ float entry=max(max(lo.x,lo.y),lo.z);
+ float exit=min(min(hi.x,hi.y),hi.z);
+
+ float t=max(entry,0.);
+ float finish=min(exit,20000.);
+
+ if(finish>t){
+
+  int steps=quality<1.5?18:
+            quality<2.5?26:36;
+
+  float stepLength=(finish-t)/float(steps);
+
+  float trans=1.;
+  vec3 accumulated=vec3(0.);
+
+  vec3 sunDir=normalize(vec3(
+   -.55,
+   sin(radians(sun)),
+   .65
+  ));
+
+  for(int i=0;i<36;i++){
+
+   if(i>=steps||trans<.025)break;
+
+   vec3 p=cam+rd*(t+(float(i)+.5)*stepLength);
+
+   if(p.y>250.&&p.y<10500.){
+
+    float den=totalDensity(p);
+
+    if(den>.015){
+
+     float heightFactor=clamp(
+      (p.y-500.)/7500.,
+      0.,1.
+     );
+
+     float lighting=
+      .42+
+      .33*max(dot(rd,sunDir),0.)+
+      heightFactor*.13;
+
+     // Dark cloud undersides and illuminated edges.
+     vec3 cloudColor=mix(
+      vec3(.29,.35,.42),
+      vec3(.91,.95,.98),
+      clamp(lighting,0.,1.)
+     );
+
+     float edgeLight=pow(
+      max(dot(rd,sunDir),0.),
+      2.
+     );
+
+     cloudColor+=vec3(.15,.17,.19)*edgeLight;
+
+     float alpha=1.-exp(
+      -den*stepLength*.00125
+     );
+
+     accumulated+=trans*alpha*cloudColor;
+
+     trans*=1.-alpha;
+    }
    }
-   col=cloudCol+trans*col;
+  }
+
+  col=accumulated+trans*col;
  }
- // subtle atmospheric perspective / scientific altitude guide
- if(uScale>.5&&uScientific>.5){
-   float guide=0.;
-   for(int k=0;k<4;k++){float y=1500.+float(k)*2000.;float delta=abs(uCamPos.y+rd.y*5000.-y);guide=max(guide,exp(-delta*.012)*.035);}
-   col=mix(col,vec3(.35,.78,.94),guide);
- }
- float flash=uLightning*exp(-mod(uTime*2.1,1.0)*7.0);
- col+=vec3(.65,.78,1.)*flash*.55;
- col=pow(max(col,0.),vec3(.94));
+
+ col+=vec3(.65,.79,1.)*lightning*.25;
+
+ col=pow(max(col,0.),vec3(.95));
+
  gl_FragColor=vec4(col,1.);
-}`;
-const material=new THREE.ShaderMaterial({vertexShader:vertex,fragmentShader:fragment,uniforms,depthWrite:false,depthTest:false});
-const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);scene.add(quad);
+}
+`;
 
-const systems={
+const material=new THREE.ShaderMaterial({
+ vertexShader,
+ fragmentShader,
+ uniforms,
+ depthTest:false,
+ depthWrite:false
+});
+
+const plane=new THREE.Mesh(
+ new THREE.PlaneGeometry(2,2),
+ material
+);
+
+scene.add(plane);
+
+// Cloud positions are stored in fixed world units.
+// They do not scale when the camera moves.
+
+const presets={
+
  severe:[
-  [0,0,650,7900,1,1450,2.2,1],[2600,-900,700,6100,1,1150,4.1,.8],[-2700,1500,900,5700,1,1050,1.7,.6],
-  [3900,2100,1200,4900,0,950,3.1,.5],[-4300,-1900,500,4300,2,1500,5.2,.3],[1000,3900,850,5200,1,1050,6.2,.9],
-  [-1300,-4200,600,4700,0,1050,7.3,.4],[4800,-3600,800,5500,1,1200,8.1,.8]],
- supercell:[[0,0,500,9300,1,1900,2.4,1],[2900,2100,800,5100,0,1000,3.2,.4],[-3200,-1900,700,4600,2,1300,5.1,.3],[4200,-2500,600,4900,0,950,6.2,.6],[-4400,2400,900,5300,1,1100,7.2,.8],[1600,-4200,700,4500,0,1100,8.1,.4],[0,4300,600,5000,2,1400,9.1,.2],[0,0,0,0,0,0,0,0]],
- towering:[[0,0,350,8500,1,1550,1.2,.9],[2300,-1700,400,7600,1,1300,2.2,.8],[-2500,1600,500,7300,1,1250,3.3,.8],[3900,2300,700,6000,0,1050,4.4,.5],[-3900,-2600,600,6100,0,1000,5.5,.4],[1000,4000,500,6900,1,1150,6.6,.7],[-1200,-4300,450,6500,1,1100,7.7,.7],[4800,-4000,700,5700,0,900,8.8,.4]],
- stratus:[[0,0,700,3400,2,2500,1.1,.4],[3000,0,850,3600,2,2400,2.2,.4],[-3000,500,650,3300,2,2200,3.3,.4],[0,3300,800,3200,2,2300,4.4,.4],[0,-3300,700,3500,2,2500,5.5,.4],[4500,2800,900,3000,2,1900,6.6,.4],[-4600,-2600,750,3300,2,2100,7.7,.4],[0,0,0,0,0,0,0,0]],
- mixed:[[0,0,500,7600,1,1450,1.1,.9],[2600,-1700,700,4700,0,1100,2.2,.5],[-2600,1800,600,4300,2,1600,3.3,.3],[4100,2100,650,6500,1,1250,4.4,.7],[-4300,-2100,500,5100,0,1050,5.5,.5],[900,4200,750,4900,2,1700,6.6,.4],[-1100,-4300,450,7000,1,1200,7.7,.8],[4800,-3900,600,4200,0,950,8.8,.3]]
-};
-function setPreset(name){
- const arr=systems[name]||systems.severe;
- for(let i=0;i<8;i++){
-  const a=arr[i];uniforms.uClouds.value[i].set(a[0],a[1],a[2],a[3]);
-  uniforms.uMeta.value[i].set(a[4],a[5],a[6],a[7]);
- }
- uniforms.uCloudCount.value=8;
- document.getElementById('preset').value=name;
-}
-setPreset('severe');
+ [0,0,450,7500,1,1500,2.1],
+ [3200,-1400,500,6200,1,1200,3.2],
+ [-3100,1800,600,5900,1,1250,4.3],
+ [4700,2400,700,4800,0,1000,5.4],
+ [-4500,-2500,500,5000,2,1450,6.5],
+ [1200,4300,700,5500,1,1150,7.6]
+ ],
 
-let yaw=0,pitch=.17,radius=9300,target=new THREE.Vector3(0,3000,0),paused=false,scientific=false,lightningUntil=0;
-function updateCamera(){
- pitch=THREE.MathUtils.clamp(pitch,-.12,1.05);
- const pos=new THREE.Vector3(target.x+Math.sin(yaw)*Math.cos(pitch)*radius,target.y+Math.sin(pitch)*radius,target.z+Math.cos(yaw)*Math.cos(pitch)*radius);
- const forward=target.clone().sub(pos).normalize();
- const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
- const up=new THREE.Vector3().crossVectors(right,forward).normalize();
- uniforms.uCamPos.value.copy(pos);uniforms.uForward.value.copy(forward);uniforms.uRight.value.copy(right);uniforms.uUp.value.copy(up);
+ supercell:[
+ [0,0,350,9200,1,1900,2.1],
+ [3800,2000,650,4800,0,1050,3.2],
+ [-3900,-2300,500,4600,2,1300,4.3],
+ [4500,-3000,600,5000,0,1000,5.4],
+ [-4300,2800,750,5200,1,1100,6.5],
+ [1500,-4400,450,4700,0,1050,7.6]
+ ],
+
+ tower:[
+ [0,0,300,8500,1,1500,1.1],
+ [2600,-1700,350,7600,1,1300,2.2],
+ [-2800,1700,400,7400,1,1250,3.3],
+ [4000,2600,500,6300,0,1100,4.4],
+ [-4000,-2600,450,6200,0,1050,5.5],
+ [1000,4200,400,6800,1,1200,6.6]
+ ],
+
+ mixed:[
+ [0,0,450,7400,1,1450,1.1],
+ [2700,-1600,650,4800,0,1100,2.2],
+ [-2700,1900,550,4400,2,1600,3.3],
+ [4200,2200,650,6400,1,1250,4.4],
+ [-4300,-2200,500,5200,0,1050,5.5],
+ [900,4200,700,5000,2,1700,6.6]
+ ],
+
+ stratus:[
+ [0,0,650,3400,2,2400,1.1],
+ [3400,0,700,3600,2,2300,2.2],
+ [-3400,500,650,3300,2,2200,3.3],
+ [0,3500,700,3200,2,2300,4.4],
+ [0,-3500,650,3500,2,2400,5.5],
+ [4500,3000,750,3300,2,1900,6.6]
+ ]
+
+};
+
+function setPreset(name){
+
+ const arr=presets[name]||presets.severe;
+
+ for(let i=0;i<6;i++){
+
+  const a=arr[i];
+
+  uniforms.cloudPos.value[i].set(
+   a[0],a[1],a[2],a[3]
+  );
+
+  uniforms.cloudData.value[i].set(
+   a[4],a[5],a[6],0
+  );
+ }
 }
+
+setPreset("severe");
+
+// Camera controls.
+let yaw=0;
+let pitch=.12;
+let radius=10500;
+
+let target=new THREE.Vector3(0,2500,0);
+
+function updateCamera(){
+
+ pitch=THREE.MathUtils.clamp(
+  pitch,-.35,1.15
+ );
+
+ const pos=new THREE.Vector3(
+  target.x+Math.sin(yaw)*Math.cos(pitch)*radius,
+  target.y+Math.sin(pitch)*radius,
+  target.z+Math.cos(yaw)*Math.cos(pitch)*radius
+ );
+
+ const forward=target.clone().sub(pos).normalize();
+
+ const right=new THREE.Vector3()
+  .crossVectors(forward,new THREE.Vector3(0,1,0))
+  .normalize();
+
+ const up=new THREE.Vector3()
+  .crossVectors(right,forward)
+  .normalize();
+
+ uniforms.cam.value.copy(pos);
+ uniforms.forward.value.copy(forward);
+ uniforms.right.value.copy(right);
+ uniforms.up.value.copy(up);
+}
+
 updateCamera();
-let pointers=new Map(),lastX=0,lastY=0,lastPinch=0,panMode=false;
-renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});lastX=e.clientX;lastY=e.clientY;panMode=e.button===2||e.shiftKey;});
-renderer.domElement.addEventListener('pointermove',e=>{
+
+let pointers=new Map();
+let lastPinch=0;
+let pan=false;
+
+renderer.domElement.addEventListener("pointerdown",e=>{
+
+ renderer.domElement.setPointerCapture(e.pointerId);
+
+ pointers.set(e.pointerId,{
+  x:e.clientX,
+  y:e.clientY
+ });
+
+ pan=e.button===2||e.shiftKey;
+});
+
+renderer.domElement.addEventListener("pointermove",e=>{
+
  if(!pointers.has(e.pointerId))return;
- const old=pointers.get(e.pointerId),dx=e.clientX-old.x,dy=e.clientY-old.y;
- pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+
+ const old=pointers.get(e.pointerId);
+
+ const dx=e.clientX-old.x;
+ const dy=e.clientY-old.y;
+
+ pointers.set(e.pointerId,{
+  x:e.clientX,
+  y:e.clientY
+ });
+
  if(pointers.size>=2){
-  const pts=[...pointers.values()],dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
-  if(lastPinch)radius=THREE.MathUtils.clamp(radius*lastPinch/dist,2600,18000);lastPinch=dist;
- }else if(panMode){target.x-=dx*radius*.0018;target.y+=dy*radius*.0018;}
- else{yaw-=dx*.004;pitch+=dy*.003;}
+
+  const pts=[...pointers.values()];
+
+  const dist=Math.hypot(
+   pts[0].x-pts[1].x,
+   pts[0].y-pts[1].y
+  );
+
+  if(lastPinch){
+
+   radius=THREE.MathUtils.clamp(
+    radius*lastPinch/dist,
+    1000,30000
+   );
+  }
+
+  lastPinch=dist;
+
+ }else if(pan){
+
+  target.x-=dx*radius*.0015;
+  target.y+=dy*radius*.0015;
+
+ }else{
+
+  yaw-=dx*.004;
+  pitch+=dy*.003;
+ }
+
  updateCamera();
 });
-function endPointer(e){pointers.delete(e.pointerId);if(pointers.size<2)lastPinch=0;}
-renderer.domElement.addEventListener('pointerup',endPointer);renderer.domElement.addEventListener('pointercancel',endPointer);renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
-renderer.domElement.addEventListener('wheel',e=>{radius=THREE.MathUtils.clamp(radius*Math.exp(e.deltaY*.001),2600,18000);updateCamera();},{passive:true});
-function bindRange(id,uniform,format){const el=document.getElementById(id),out=document.getElementById(id+'Val');const apply=()=>{const v=+el.value;uniforms[uniform].value=id==='coverage'?v/100:id==='sun'?v:v;out.textContent=format(v);};el.addEventListener('input',apply);apply();}
-bindRange('density','uDensity',v=>v.toFixed(2));bindRange('coverage','uCoverage',v=>v+'%');bindRange('wind','uWind',v=>v+' м/с');bindRange('sun','uSun',v=>v+'°');bindRange('growth','uGrowth',v=>v+'%');
-const detail=document.getElementById('detail');detail.addEventListener('input',()=>{uniforms.uDetail.value=+detail.value;document.getElementById('detailVal').textContent=['','Средняя','Высокая','Экстремальная'][+detail.value];});detail.dispatchEvent(new Event('input'));
-document.getElementById('preset').addEventListener('change',e=>setPreset(e.target.value));
-document.getElementById('pause').addEventListener('click',e=>{paused=!paused;e.currentTarget.textContent=paused?'▶ Продолжить':'Ⅱ Пауза';});
-document.getElementById('reset').addEventListener('click',()=>{yaw=0;pitch=.17;radius=9300;target.set(0,3000,0);updateCamera();});
-document.getElementById('lightning').addEventListener('click',()=>{lightningUntil=performance.now()+850;});
-document.getElementById('wire').addEventListener('click',e=>{scientific=!scientific;uniforms.uScientific.value=scientific?1:0;e.currentTarget.classList.toggle('active',scientific);});
-document.getElementById('scale').addEventListener('change',e=>uniforms.uScale.value=e.target.checked?1:0);
-document.getElementById('animate').addEventListener('change',e=>window.animating=e.target.checked);
-window.animating=true;
-document.getElementById('mobileToggle').addEventListener('click',()=>document.getElementById('controls').classList.toggle('collapsed'));
-let start=performance.now(),frames=0,lastStatus=start;
-function animate(now){
- requestAnimationFrame(animate);
- if(!paused&&window.animating)uniforms.uTime.value=(now-start)*.001;
- uniforms.uLightning.value=now<lightningUntil?Math.max(0,1-(now-(lightningUntil-850))/850):0;
- renderer.render(scene,camera);
- frames++;
- if(now-lastStatus>1000){statusEl.textContent='LIVE · '+Math.round(frames*1000/(now-lastStatus))+' FPS · VOLUMETRIC';frames=0;lastStatus=now;}
+
+function pointerEnd(e){
+ pointers.delete(e.pointerId);
+ if(pointers.size<2)lastPinch=0;
 }
-requestAnimationFrame(animate);
-function resize(){renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));uniforms.uResolution.value.set(innerWidth,innerHeight);}
-addEventListener('resize',resize);
-document.getElementById('loading').style.opacity='0';setTimeout(()=>document.getElementById('loading').remove(),550);
+
+renderer.domElement.addEventListener("pointerup",pointerEnd);
+renderer.domElement.addEventListener("pointercancel",pointerEnd);
+renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
+
+renderer.domElement.addEventListener("wheel",e=>{
+
+ radius=THREE.MathUtils.clamp(
+  radius*Math.exp(e.deltaY*.001),
+  1000,30000
+ );
+
+ updateCamera();
+
+},{passive:true});
+
+// UI controls.
+
+function slider(id,uniform,out,format,scale=1){
+
+ const el=document.getElementById(id);
+ const label=document.getElementById(out);
+
+ function apply(){
+
+  const value=+el.value;
+
+  uniforms[uniform].value=value*scale;
+
+  label.textContent=format(value);
+ }
+
+ el.addEventListener("input",apply);
+ apply();
+}
+
+slider("density","density","densityV",v=>v.toFixed(2));
+slider("coverage","coverage","coverageV",v=>v+"%",.01);
+slider("wind","wind","windV",v=>v+" м/с");
+slider("sun","sun","sunV",v=>v+"°");
+slider("growth","growth","growthV",v=>v+"%",.01);
+
+document.getElementById("quality").addEventListener("input",e=>{
+
+ uniforms.quality.value=+e.target.value;
+
+ document.getElementById("qualityV").textContent=e.target.value;
+});
+
+document.getElementById("preset").addEventListener("change",e=>{
+ setPreset(e.target.value);
+});
+
+let paused=false;
+
+document.getElementById("pause").onclick=e=>{
+
+ paused=!paused;
+
+ e.target.textContent=paused
+  ?"▶ Продолжить"
+  :"Ⅱ Пауза";
+};
+
+document.getElementById("reset").onclick=()=>{
+
+ yaw=0;
+ pitch=.12;
+ radius=10500;
+ target.set(0,2500,0);
+
+ updateCamera();
+};
+
+let lightningEnd=0;
+
+document.getElementById("lightning").onclick=()=>{
+ lightningEnd=performance.now()+700;
+};
+
+let scientific=false;
+
+document.getElementById("scientific").onclick=e=>{
+
+ scientific=!scientific;
+
+ uniforms.scientific.value=scientific?1:0;
+
+ e.target.classList.toggle("active",scientific);
+};
+
+document.getElementById("contours").onchange=e=>{
+ uniforms.contours.value=e.target.checked?1:0;
+};
+
+let animation=true;
+
+document.getElementById("animation").onchange=e=>{
+ animation=e.target.checked;
+};
+
+document.getElementById("mobile").onclick=()=>{
+ document.getElementById("panel").classList.toggle("hidden");
+};
+
+// Resize.
+function resize(){
+
+ const isMobile=innerWidth<700;
+
+ renderer.setPixelRatio(
+  Math.min(devicePixelRatio,isMobile?.62:.85)
+ );
+
+ renderer.setSize(innerWidth,innerHeight);
+
+ uniforms.resolution.value.set(
+  innerWidth,innerHeight
+ );
+}
+
+window.addEventListener("resize",resize);
+
+// Rendering.
+let start=performance.now();
+let last=performance.now();
+let frames=0;
+let lastFps=performance.now();
+
+function animate(now){
+
+ requestAnimationFrame(animate);
+
+ const dt=Math.min((now-last)*.001,.05);
+
+ last=now;
+
+ if(!paused&&animation){
+  uniforms.time.value+=(dt);
+ }
+
+ uniforms.lightning.value=now<lightningEnd?1:0;
+
+ try{
+
+  renderer.render(scene,camera);
+
+ }catch(e){
+
+  showError("Ошибка рендеринга:\n"+e);
+  return;
+ }
+
+ frames++;
+
+ if(now-lastFps>1000){
+
+  const fps=Math.round(
+   frames*1000/(now-lastFps)
+  );
+
+  document.getElementById("fps").textContent=
+   "LIVE · "+fps+" FPS";
+
+  frames=0;
+  lastFps=now;
+ }
+}
+
+// Shader compilation diagnostics.
+try{
+
+ renderer.compile(scene,camera);
+
+ requestAnimationFrame(animate);
+
+ document.getElementById("loading").style.opacity="0";
+
+ setTimeout(()=>{
+  document.getElementById("loading").remove();
+ },600);
+
+}catch(e){
+
+ showError("Ошибка компиляции шейдера:\n"+e);
+}
+
 </script>
 </body>
 </html>
