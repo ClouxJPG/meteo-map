@@ -130,9 +130,10 @@ export function createVisuals(scene,model){
     vec3 q=p*.8+vec3(clock*.004,0.,clock*.002);
 
     float n=fbm(q);
-    float erosion=mix(.10,.35,n);
 
-    return smoothstep(erosion,.55,base)*min(1.,base*2.4);
+    float erosion=mix(.04,.16,n);
+
+    return smoothstep(erosion,.32,base)*min(1.,base*1.8);
    }
 
    void main(){
@@ -169,7 +170,7 @@ export function createVisuals(scene,model){
 
       cloud*=light*shade;
 
-      float a=d*.105;
+      float a=d*.16;
 
       color+=(1.-alpha)*cloud*a;
       alpha+=(1.-alpha)*a;
@@ -286,8 +287,6 @@ export function createVisuals(scene,model){
 
  function update(dt,now,camera){
 
-  /* Update volume texture */
-
   textureUpdateTimer+=dt;
 
   if(textureUpdateTimer>=.12){
@@ -302,7 +301,7 @@ export function createVisuals(scene,model){
 
       const q=qc[x+NX*(y+NY*z)];
 
-      const d=clamp((q-.025)/2.2,0,1);
+      const d=clamp((q-.015)/.65,0,1);
 
       data[ptr++]=Math.round(Math.pow(d,.8)*255);
      }
@@ -320,7 +319,7 @@ export function createVisuals(scene,model){
 
   material.uniforms.clock.value=now;
 
-  /* Rain movement */
+  /* RAIN MOVEMENT */
 
   const positions=rainGeometry.attributes.position.array;
 
@@ -338,7 +337,7 @@ export function createVisuals(scene,model){
 
   rainGeometry.attributes.position.needsUpdate=true;
 
-  /* Lightning timer */
+  /* LIGHTNING TIMER */
 
   lightningTimer-=dt;
 
