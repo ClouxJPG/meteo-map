@@ -1,936 +1,107 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>StormLab 3D — Atmospheric Simulation</title>
-
+<title>StormLab 3D</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#a9c5db;color:#eaf4ff;font-family:Arial,sans-serif}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9dbbd3;color:#eaf4ff;font-family:Arial,sans-serif}
 #view{position:absolute;inset:0}
 canvas{display:block;width:100%;height:100%;touch-action:none}
-#top{
- position:absolute;top:0;left:0;right:0;height:55px;
- display:flex;align-items:center;justify-content:space-between;
- padding:0 16px;background:linear-gradient(#071523dd,#07152300);
- pointer-events:none
-}
-.brand{font-size:17px;font-weight:800;letter-spacing:1.5px}
+#top{position:absolute;top:0;left:0;right:0;height:55px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(#071523dd,#07152300);pointer-events:none;z-index:2}
+.brand{font-size:16px;font-weight:800;letter-spacing:1.5px}
 .brand span{color:#62c9ff}
-.status{font-size:11px;color:#b8d3e8}
-#panel{
- position:absolute;left:12px;top:68px;width:245px;max-height:calc(100% - 82px);
- overflow-y:auto;background:#071725eF;border:1px solid #34516a;
- border-radius:12px;padding:13px;backdrop-filter:blur(12px);
- scrollbar-width:thin
-}
-h3{font-size:11px;letter-spacing:1.4px;color:#80caff;margin:4px 0 12px}
-.group{border-top:1px solid #294154;padding:11px 0}
-.label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px;color:#d6e6f3}
-.value{color:#75caff;font-variant-numeric:tabular-nums}
-input[type=range]{width:100%;accent-color:#50baff;height:18px}
-.buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-button{
- border:1px solid #41637c;background:#17364d;color:#eaf6ff;
- border-radius:7px;padding:9px 7px;font-size:12px;font-weight:600
-}
-button:active{background:#28628b}
+#status{font-size:10px;color:#c3dced}
+#panel{position:absolute;left:10px;top:65px;width:225px;max-height:calc(100% - 78px);overflow:auto;background:#071725ed;border:1px solid #34516a;border-radius:12px;padding:12px;backdrop-filter:blur(12px);z-index:5;transition:.22s}
+#panel.hidden{transform:translateX(-120%);opacity:0;pointer-events:none}
+#toggle{position:absolute;left:10px;top:65px;z-index:6;display:none}
+#toggle.show{display:block}
+h3{font-size:10px;letter-spacing:1.3px;color:#80caff;margin:5px 0 10px}
+.group{border-top:1px solid #294154;padding:10px 0}
+.label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}
+.value{color:#75caff}
+input[type=range]{width:100%;accent-color:#50baff}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{border:1px solid #41637c;background:#17364d;color:#eaf6ff;border-radius:7px;padding:9px 6px;font-size:12px;font-weight:600}
 button.primary{background:#0879b7;border-color:#30a8eb}
-.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .stat{background:#102a3c;border-radius:7px;padding:8px}
-.stat small{display:block;font-size:9px;color:#91afc5;margin-bottom:5px}
-.stat strong{font-size:15px;color:#e5f5ff;font-variant-numeric:tabular-nums}
-#help{
- position:absolute;right:12px;bottom:12px;background:#071725c9;
- border:1px solid #34516a;border-radius:8px;padding:9px 12px;
- color:#c6dceb;font-size:10px;line-height:1.7;pointer-events:none
-}
-#loading{
- position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
- background:#101f2d;color:#d9efff;font-size:14px;z-index:10
-}
+.stat small{display:block;font-size:9px;color:#91afc5;margin-bottom:4px}
+.stat strong{font-size:13px;font-variant-numeric:tabular-nums}
+#help{position:absolute;right:9px;bottom:9px;padding:8px 10px;border-radius:8px;background:#071725c9;border:1px solid #34516a;font-size:9px;line-height:1.6;pointer-events:none}
 @media(max-width:600px){
- #panel{width:205px;top:61px;left:8px;padding:10px;max-height:calc(100% - 75px)}
- #top{padding:0 10px}
+ #panel{width:205px;left:8px;top:60px;max-height:calc(100% - 72px);padding:10px}
+ #toggle{left:8px;top:60px}
+ #top{padding:0 9px}
  .brand{font-size:14px}
- #help{right:8px;bottom:8px;font-size:9px}
 }
 </style>
 </head>
-
 <body>
 <div id="view"></div>
 
-<div id="loading">Инициализация атмосферной модели…</div>
-
 <div id="top">
  <div class="brand">STORM<span>LAB</span> 3D</div>
- <div class="status" id="status">INITIALIZING</div>
+ <div id="status">INITIALIZING</div>
 </div>
 
+<button id="toggle">☰</button>
+
 <div id="panel">
- <h3>ATMOSPHERIC MODEL</h3>
+ <div style="display:flex;justify-content:space-between;align-items:center">
+  <h3>ATMOSPHERIC MODEL</h3>
+  <button id="close" style="padding:5px 9px">✕</button>
+ </div>
 
  <div class="buttons">
   <button class="primary" id="pause">Пауза</button>
-  <button id="step">Шаг модели</button>
+  <button id="step">Шаг</button>
   <button id="reset">Перезапуск</button>
-  <button id="camera">Сброс камеры</button>
+  <button id="camera">Камера</button>
  </div>
 
  <div class="group">
-  <div class="label"><span>Скорость модели</span><span class="value" id="speedVal">1.0×</span></div>
-  <input id="speed" type="range" min="0.2" max="4" step="0.1" value="1">
+  <div class="label"><span>Скорость</span><span class="value" id="speedV">1.0×</span></div>
+  <input id="speed" type="range" min=".2" max="4" step=".1" value="1">
  </div>
 
- <h3>BOUNDARY CONDITIONS</h3>
-
+ <h3>ENVIRONMENT</h3>
  <div class="group">
-  <div class="label"><span>Нагрев поверхности</span><span class="value" id="heatVal">65%</span></div>
+  <div class="label"><span>Нагрев поверхности</span><span class="value" id="heatV">65%</span></div>
   <input id="heat" type="range" min="0" max="100" value="65">
  </div>
-
  <div class="group">
-  <div class="label"><span>Влажность воздуха</span><span class="value" id="moistVal">85%</span></div>
+  <div class="label"><span>Влажность</span><span class="value" id="moistV">85%</span></div>
   <input id="moist" type="range" min="30" max="100" value="85">
  </div>
-
  <div class="group">
-  <div class="label"><span>Фоновый ветер</span><span class="value" id="windVal">12 m/s</span></div>
+  <div class="label"><span>Ветер</span><span class="value" id="windV">12 m/s</span></div>
   <input id="wind" type="range" min="0" max="35" value="12">
  </div>
-
  <div class="group">
-  <div class="label"><span>Вертикальный сдвиг</span><span class="value" id="shearVal">15 m/s</span></div>
+  <div class="label"><span>Сдвиг ветра</span><span class="value" id="shearV">15 m/s</span></div>
   <input id="shear" type="range" min="0" max="35" value="15">
  </div>
 
- <h3>MODEL DIAGNOSTICS</h3>
- <div class="statgrid">
+ <h3>DIAGNOSTICS</h3>
+ <div class="stats">
   <div class="stat"><small>MAX UPDRAFT</small><strong id="updraft">0.0 m/s</strong></div>
-  <div class="stat"><small>MAX CLOUD WATER</small><strong id="cloud">0.00 g/kg</strong></div>
-  <div class="stat"><small>MAX TEMPERATURE</small><strong id="temp">0.0 °C</strong></div>
+  <div class="stat"><small>CLOUD WATER</small><strong id="cloud">0.00 g/kg</strong></div>
+  <div class="stat"><small>MAX TEMP</small><strong id="temp">0.0 °C</strong></div>
   <div class="stat"><small>MODEL TIME</small><strong id="time">00:00</strong></div>
  </div>
-
  <div class="group">
-  <div class="label"><span>Состояние конвекции</span><span class="value" id="conv">STABLE</span></div>
+  <div class="label"><span>Конвекция</span><span class="value" id="conv">STABLE</span></div>
   <div style="font-size:10px;color:#91afc5;line-height:1.5">
-   Облачность рассчитывается из поля влажности и температуры. Начальные тепловые возмущения запускают развитие конвекции.
+   Экспериментальная модель влажной конвекции. Физические и визуальные модули разделены.
   </div>
  </div>
 </div>
 
-<div id="help">
- Одно касание — вращение<br>
- Два пальца — масштаб и перемещение<br>
- Колесо мыши — приближение
-</div>
+<div id="help">Одно касание — вращение<br>Два пальца — масштаб и перемещение</div>
 
-<script type="module">
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-import {OrbitControls} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
-
-/* =========================================================
-   STORMLAB 3D
-   Experimental moist-convection model
-
-   This is a simplified educational numerical model.
-   It is not a research-grade cloud-resolving model.
-========================================================= */
-
-/* ---------------- GRID ---------------- */
-
-const NX=28;
-const NY=24;
-const NZ=28;
-const N=NX*NY*NZ;
-
-const DX=500;
-const DZ=500;
-const DY=500;
-
-const WIDTH=NX*DX/1000;
-const HEIGHT=NY*DY/1000;
-const DEPTH=NZ*DZ/1000;
-
-const DT=1.0;
-
-const idx=(x,y,z)=>x+NX*(y+NY*z);
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-
-const fields={
- u:new Float32Array(N),
- v:new Float32Array(N),
- w:new Float32Array(N),
- temp:new Float32Array(N),
- qv:new Float32Array(N),
- qc:new Float32Array(N),
- qr:new Float32Array(N),
- buoy:new Float32Array(N)
-};
-
-const old={
- temp:new Float32Array(N),
- qv:new Float32Array(N),
- qc:new Float32Array(N),
- qr:new Float32Array(N),
- u:new Float32Array(N),
- v:new Float32Array(N),
- w:new Float32Array(N)
-};
-
-let simTime=0;
-let paused=false;
-let frameCount=0;
-let maxUpdraft=0;
-let maxCloud=0;
-let maxTemp=0;
-
-/* ---------------- ATMOSPHERE ---------------- */
-
-function envTemp(height){
- return 300.15-0.0065*height;
-}
-
-function pressureAt(height){
- return 101325*Math.exp(-height/8400);
-}
-
-function qsat(tempK,pressure){
- const tc=tempK-273.15;
- const es=611.2*Math.exp(17.67*tc/(tc+243.5));
- return 0.622*es/(pressure-es)*1000;
-}
-
-function initialize(){
-
- simTime=0;
- maxUpdraft=0;
- maxCloud=0;
-
- const humidity=Number(moist.value)/100;
-
- for(let z=0;z<NZ;z++){
-  for(let y=0;y<NY;y++){
-   for(let x=0;x<NX;x++){
-
-    const i=idx(x,y,z);
-    const h=y*DY;
-    const T=envTemp(h);
-
-    fields.temp[i]=T;
-    fields.qv[i]=qsat(T,pressureAt(h))*humidity;
-    fields.qc[i]=0;
-    fields.qr[i]=0;
-
-    const wind=Number(windSlider.value);
-    const shear=Number(shearSlider.value);
-
-    fields.u[i]=wind+shear*(h/HEIGHT/1000);
-    fields.v[i]=0;
-    fields.w[i]=0;
-
-    fields.buoy[i]=0;
-   }
-  }
- }
-
- // Small thermal perturbations at the surface.
- // These are initial atmospheric disturbances,
- // not predefined cloud objects.
-
- for(let z=0;z<NZ;z++){
-  for(let x=0;x<NX;x++){
-
-   const px=(x-NX*.5);
-   const pz=(z-NZ*.5);
-
-   const r1=Math.sqrt((px+5)**2+(pz+2)**2);
-   const r2=Math.sqrt((px-5)**2+(pz-4)**2);
-   const r3=Math.sqrt((px)**2+(pz+7)**2);
-
-   const bubble=
-    1.1*Math.exp(-r1*r1/9)+
-    0.8*Math.exp(-r2*r2/12)+
-    0.65*Math.exp(-r3*r3/14);
-
-   const i=idx(x,0,z);
-   fields.temp[i]+=bubble;
-  }
- }
-
- updateVolume();
-}
-
-/* ---------------- INTERPOLATION ---------------- */
-
-function sample(arr,x,y,z){
-
- x=clamp(x,0,NX-1.001);
- y=clamp(y,0,NY-1.001);
- z=clamp(z,0,NZ-1.001);
-
- const x0=Math.floor(x);
- const y0=Math.floor(y);
- const z0=Math.floor(z);
-
- const x1=x0+1;
- const y1=y0+1;
- const z1=z0+1;
-
- const fx=x-x0;
- const fy=y-y0;
- const fz=z-z0;
-
- const a=arr[idx(x0,y0,z0)]*(1-fx)+arr[idx(x1,y0,z0)]*fx;
- const b=arr[idx(x0,y1,z0)]*(1-fx)+arr[idx(x1,y1,z0)]*fx;
- const c=arr[idx(x0,y0,z1)]*(1-fx)+arr[idx(x1,y0,z1)]*fx;
- const d=arr[idx(x0,y1,z1)]*(1-fx)+arr[idx(x1,y1,z1)]*fx;
-
- return (a*(1-fy)+b*fy)*(1-fz)+(c*(1-fy)+d*fy)*fz;
-}
-
-function copyFields(){
- for(const k of Object.keys(old)){
-  old[k].set(fields[k]);
- }
-}
-
-/* ---------------- ADVECTION ---------------- */
-
-function advectScalars(){
-
- copyFields();
-
- const scale=DT/DX;
-
- for(let z=1;z<NZ-1;z++){
-  for(let y=1;y<NY-1;y++){
-   for(let x=1;x<NX-1;x++){
-
-    const i=idx(x,y,z);
-
-    const bx=x-old.u[i]*scale;
-    const by=y-old.w[i]*DT/DY;
-    const bz=z-old.v[i]*scale;
-
-    fields.temp[i]=sample(old.temp,bx,by,bz);
-    fields.qv[i]=sample(old.qv,bx,by,bz);
-    fields.qc[i]=sample(old.qc,bx,by,bz);
-    fields.qr[i]=sample(old.qr,bx,by,bz);
-   }
-  }
- }
-}
-
-/* ---------------- BUOYANCY ---------------- */
-
-function calculateBuoyancy(){
-
- const heat=Number(heatSlider.value)/100;
-
- maxUpdraft=0;
- maxTemp=-100;
-
- for(let z=1;z<NZ-1;z++){
-  for(let y=1;y<NY-1;y++){
-   for(let x=1;x<NX-1;x++){
-
-    const i=idx(x,y,z);
-    const h=y*DY;
-
-    const environmental=envTemp(h);
-    const T=fields.temp[i];
-
-    const vapor=fields.qv[i]/1000;
-    const cloud=fields.qc[i]/1000;
-
-    const virtualT=T*(1+0.61*vapor-cloud);
-
-    const buoyancy=9.81*(virtualT-environmental)/environmental;
-
-    fields.buoy[i]=buoyancy;
-
-    fields.w[i]+=buoyancy*DT;
-
-    // Numerical damping
-    fields.w[i]*=0.994;
-
-    fields.w[i]=clamp(fields.w[i],-12,45);
-
-    // Dry adiabatic temperature change during vertical motion.
-    fields.temp[i]-=0.0098*fields.w[i]*DT;
-
-    // Surface heat flux
-    if(y<3){
-     const surfaceFactor=(1-y/3);
-     fields.temp[i]+=heat*0.014*surfaceFactor*DT;
-    }
-
-    // Small turbulent perturbations
-    const noise=Math.sin(x*12.9898+z*78.233+y*37.719+simTime*.13);
-    fields.temp[i]+=noise*0.0007;
-
-    maxUpdraft=Math.max(maxUpdraft,fields.w[i]);
-    maxTemp=Math.max(maxTemp,T-273.15);
-   }
-  }
- }
-}
-
-/* ---------------- MOIST MICROPHYSICS ---------------- */
-
-function microphysics(){
-
- const humidity=Number(moist.value)/100;
-
- maxCloud=0;
-
- for(let z=1;z<NZ-1;z++){
-  for(let y=1;y<NY-1;y++){
-   for(let x=1;x<NX-1;x++){
-
-    const i=idx(x,y,z);
-    const h=y*DY;
-
-    const T=fields.temp[i];
-    const p=pressureAt(h);
-
-    const saturation=qsat(T,p);
-    const excess=fields.qv[i]-saturation;
-
-    // Condensation
-    if(excess>0){
-     const cond=Math.min(excess,excess*0.22);
-     fields.qv[i]-=cond;
-     fields.qc[i]+=cond;
-    }
-
-    // Evaporation
-    if(excess<0 && fields.qc[i]>0){
-     const evap=Math.min(fields.qc[i],-excess*0.08);
-     fields.qc[i]-=evap;
-     fields.qv[i]+=evap;
-    }
-
-    // Autoconversion to rain
-    if(fields.qc[i]>1.0){
-     const convert=(fields.qc[i]-1.0)*0.012;
-     fields.qc[i]-=convert;
-     fields.qr[i]+=convert;
-    }
-
-    // Rain fallout
-    const fall=Math.min(fields.qr[i],0.025);
-    fields.qr[i]-=fall;
-
-    if(y>0){
-     const below=idx(x,y-1,z);
-     fields.qr[below]+=fall*0.94;
-    }
-
-    // Evaporative cooling from rain
-    if(fields.qr[i]>0 && fields.qv[i]<saturation){
-     fields.temp[i]-=fields.qr[i]*0.0008;
-    }
-
-    fields.qv[i]=clamp(fields.qv[i],0,30);
-    fields.qc[i]=clamp(fields.qc[i],0,8);
-    fields.qr[i]=clamp(fields.qr[i],0,15);
-
-    maxCloud=Math.max(maxCloud,fields.qc[i]);
-   }
-  }
- }
-}
-
-/* ---------------- WIND FIELD ---------------- */
-
-function updateWinds(){
-
- copyFields();
-
- const wind=Number(windSlider.value);
- const shear=Number(shearSlider.value);
-
- for(let z=1;z<NZ-1;z++){
-  for(let y=1;y<NY-1;y++){
-   for(let x=1;x<NX-1;x++){
-
-    const i=idx(x,y,z);
-
-    const h=y*DY;
-
-    const duDz=
-     (old.w[idx(x,y,z)]-old.w[idx(x,y-1,z)])/DY;
-
-    const dwDx=
-     (old.w[idx(x+1,y,z)]-old.w[idx(x-1,y,z)])/(2*DX);
-
-    const dwDz=
-     (old.w[idx(x,y,z+1)]-old.w[idx(x,y,z-1)])/(2*DZ);
-
-    const dvDy=
-     (old.v[idx(x,y+1,z)]-old.v[idx(x,y-1,z)])/(2*DY);
-
-    // Background wind profile
-    const targetU=wind+shear*(h/HEIGHT);
-
-    fields.u[i]+=(targetU-fields.u[i])*0.006;
-
-    // Simplified pressure-gradient / mass-continuity response.
-    fields.u[i]-=dwDx*DT*0.15;
-    fields.v[i]-=dwDz*DT*0.15;
-
-    fields.u[i]=clamp(fields.u[i],-40,70);
-    fields.v[i]=clamp(fields.v[i],-35,35);
-
-    // Weak turbulent mixing
-    fields.u[i]=fields.u[i]*0.998+wind*0.002;
-   }
-  }
- }
-}
-
-/* ---------------- MODEL STEP ---------------- */
-
-function modelStep(){
-
- advectScalars();
- calculateBuoyancy();
- microphysics();
- updateWinds();
-
- simTime+=DT;
-
- frameCount++;
-
- if(frameCount%3===0){
-  updateVolume();
-  updateStats();
- }
-}
-
-/* =========================================================
-   THREE.JS VISUALIZATION
-========================================================= */
-
-const container=document.getElementById("view");
-
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x9dbbd3);
-
-const camera=new THREE.PerspectiveCamera(
- 48,
- window.innerWidth/window.innerHeight,
- 0.1,
- 250
-);
-
-camera.position.set(25,18,31);
-
-const renderer=new THREE.WebGLRenderer({
- antialias:false,
- alpha:false,
- powerPreference:"high-performance"
-});
-
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.15));
-renderer.setSize(window.innerWidth,window.innerHeight);
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.15;
-
-container.appendChild(renderer.domElement);
-
-/* ---------------- CAMERA CONTROLS ---------------- */
-
-const controls=new OrbitControls(camera,renderer.domElement);
-
-controls.target.set(0,HEIGHT/2,0);
-controls.enableDamping=true;
-controls.dampingFactor=0.075;
-controls.enableZoom=true;
-controls.enablePan=true;
-controls.minDistance=5;
-controls.maxDistance=110;
-controls.maxPolarAngle=Math.PI*0.49;
-controls.zoomSpeed=1.15;
-controls.panSpeed=0.8;
-controls.update();
-
-/* ---------------- LIGHTS ---------------- */
-
-const ambient=new THREE.HemisphereLight(0xe9f5ff,0x61788b,2.0);
-scene.add(ambient);
-
-const sun=new THREE.DirectionalLight(0xffffff,2.2);
-sun.position.set(-20,35,15);
-scene.add(sun);
-
-/* ---------------- GROUND ---------------- */
-
-const ground=new THREE.Mesh(
- new THREE.PlaneGeometry(WIDTH,DEPTH),
- new THREE.MeshStandardMaterial({
-  color:0x657d70,
-  roughness:1
- })
-);
-
-ground.rotation.x=-Math.PI/2;
-ground.position.y=-0.08;
-scene.add(ground);
-
-/* ---------------- DOMAIN BOX ---------------- */
-
-const domain=new THREE.Box3(
- new THREE.Vector3(-WIDTH/2,0,-DEPTH/2),
- new THREE.Vector3(WIDTH/2,HEIGHT,DEPTH/2)
-);
-
-const edges=new THREE.EdgesGeometry(
- new THREE.BoxGeometry(WIDTH,HEIGHT,DEPTH)
-);
-
-const frame=new THREE.LineSegments(
- edges,
- new THREE.LineBasicMaterial({
-  color:0x42657d,
-  transparent:true,
-  opacity:0.55
- })
-);
-
-frame.position.y=HEIGHT/2;
-scene.add(frame);
-
-/* ---------------- GRID LINES ---------------- */
-
-const gridGroup=new THREE.Group();
-
-for(let x=-WIDTH/2;x<=WIDTH/2;x+=2.5){
- const points=[
-  new THREE.Vector3(x,0,-DEPTH/2),
-  new THREE.Vector3(x,0,DEPTH/2)
- ];
- const g=new THREE.BufferGeometry().setFromPoints(points);
- gridGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({
-  color:0x3d687b,transparent:true,opacity:0.25
- })));
-}
-
-for(let z=-DEPTH/2;z<=DEPTH/2;z+=2.5){
- const points=[
-  new THREE.Vector3(-WIDTH/2,0,z),
-  new THREE.Vector3(WIDTH/2,0,z)
- ];
- const g=new THREE.BufferGeometry().setFromPoints(points);
- gridGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({
-  color:0x3d687b,transparent:true,opacity:0.25
- })));
-}
-
-scene.add(gridGroup);
-
-/* =========================================================
-   3D CLOUD VOLUME
-
-   The density texture is populated from qc, the cloud-water
-   mixing ratio calculated by the numerical model.
-========================================================= */
-
-const volumeData=new Uint8Array(N);
-
-const volumeTexture=new THREE.Data3DTexture(
- volumeData,NX,NY,NZ
-);
-
-volumeTexture.format=THREE.RedFormat;
-volumeTexture.type=THREE.UnsignedByteType;
-volumeTexture.minFilter=THREE.LinearFilter;
-volumeTexture.magFilter=THREE.LinearFilter;
-volumeTexture.unpackAlignment=1;
-volumeTexture.needsUpdate=true;
-
-const volumeMaterial=new THREE.ShaderMaterial({
-
- glslVersion:THREE.GLSL3,
-
- uniforms:{
-  densityTex:{value:volumeTexture},
-  cameraLocal:{value:new THREE.Vector3()},
-  boxSize:{value:new THREE.Vector3(WIDTH,HEIGHT,DEPTH)},
-  cloudOpacity:{value:1.0},
-  lightDir:{value:new THREE.Vector3(-0.5,0.8,0.4).normalize()}
- },
-
- vertexShader:`
-  out vec3 vLocal;
-
-  void main(){
-   vLocal=position;
-   gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
-  }
- `,
-
- fragmentShader:`
-  precision highp float;
-  precision highp sampler3D;
-
-  uniform sampler3D densityTex;
-  uniform vec3 cameraLocal;
-  uniform vec3 boxSize;
-  uniform float cloudOpacity;
-  uniform vec3 lightDir;
-
-  in vec3 vLocal;
-  out vec4 outColor;
-
-  vec2 hitBox(vec3 ro,vec3 rd,vec3 bmin,vec3 bmax){
-   vec3 inv=1.0/rd;
-   vec3 t0=(bmin-ro)*inv;
-   vec3 t1=(bmax-ro)*inv;
-   vec3 lo=min(t0,t1);
-   vec3 hi=max(t0,t1);
-
-   float nearT=max(max(lo.x,lo.y),lo.z);
-   float farT=min(min(hi.x,hi.y),hi.z);
-
-   return vec2(nearT,farT);
-  }
-
-  float densityAt(vec3 p){
-   vec3 uvw=p/boxSize+0.5;
-   uvw=clamp(uvw,vec3(0.001),vec3(0.999));
-
-   float d=texture(densityTex,uvw).r;
-   return d;
-  }
-
-  void main(){
-
-   vec3 rd=normalize(vLocal-cameraLocal);
-   vec2 hit=hitBox(
-    cameraLocal,rd,
-    -boxSize*0.5,
-     boxSize*0.5
-   );
-
-   float start=max(hit.x,0.0);
-   float finish=hit.y;
-
-   if(finish<=start) discard;
-
-   float lengthRay=finish-start;
-   float stepSize=max(lengthRay/105.0,0.045);
-
-   vec3 color=vec3(0.0);
-   float alpha=0.0;
-
-   for(float t=start;t<finish;t+=stepSize){
-
-    vec3 p=cameraLocal+rd*t;
-    float d=densityAt(p);
-
-    d=smoothstep(0.035,0.48,d);
-
-    if(d>0.002){
-
-     vec3 uvw=p/boxSize+0.5;
-
-     float upper=clamp(uvw.y,0.0,1.0);
-
-     vec3 lightColor=mix(
-      vec3(0.38,0.49,0.59),
-      vec3(1.0,0.98,0.92),
-      upper
-     );
-
-     float lighting=0.72+0.28*max(dot(-rd,lightDir),0.0);
-
-     vec3 cloudColor=lightColor*lighting;
-
-     float a=d*0.075*cloudOpacity;
-
-     color+=(1.0-alpha)*cloudColor*a;
-     alpha+=(1.0-alpha)*a;
-
-     if(alpha>0.96) break;
-    }
-   }
-
-   if(alpha<0.008) discard;
-
-   outColor=vec4(color,alpha);
-  }
- `,
-
- transparent:true,
- depthWrite:false,
- side:THREE.BackSide
-});
-
-const cloudVolume=new THREE.Mesh(
- new THREE.BoxGeometry(WIDTH,HEIGHT,DEPTH),
- volumeMaterial
-);
-
-cloudVolume.position.y=HEIGHT/2;
-scene.add(cloudVolume);
-
-/* ---------------- TEXTURE UPDATE ---------------- */
-
-function updateVolume(){
-
- let ptr=0;
-
- for(let z=0;z<NZ;z++){
-  for(let y=0;y<NY;y++){
-   for(let x=0;x<NX;x++){
-
-    const i=idx(x,y,z);
-    const qc=fields.qc[i];
-
-    // Convert cloud water to normalized visible density.
-    const density=clamp((qc-0.025)/1.7,0,1);
-
-    volumeData[ptr++]=Math.round(
-     Math.pow(density,0.72)*255
-    );
-   }
-  }
- }
-
- volumeTexture.needsUpdate=true;
-}
-
-/* ---------------- DIAGNOSTICS ---------------- */
-
-function updateStats(){
-
- document.getElementById("updraft").textContent=
-  maxUpdraft.toFixed(1)+" m/s";
-
- document.getElementById("cloud").textContent=
-  maxCloud.toFixed(2)+" g/kg";
-
- document.getElementById("temp").textContent=
-  maxTemp.toFixed(1)+" °C";
-
- const seconds=Math.floor(simTime);
- const mm=String(Math.floor(seconds/60)).padStart(2,"0");
- const ss=String(seconds%60).padStart(2,"0");
-
- document.getElementById("time").textContent=mm+":"+ss;
-
- document.getElementById("conv").textContent=
-  maxUpdraft>8?"ACTIVE":
-  maxUpdraft>2?"DEVELOPING":"WEAK";
-
- document.getElementById("status").textContent=
-  paused?"PAUSED":"MODEL RUNNING";
-}
-
-/* ---------------- UI ---------------- */
-
-const heatSlider=document.getElementById("heat");
-const moist=document.getElementById("moist");
-const windSlider=document.getElementById("wind");
-const shearSlider=document.getElementById("shear");
-
-function bindSlider(id,out,format){
- const el=document.getElementById(id);
- const label=document.getElementById(out);
-
- const update=()=>label.textContent=format(Number(el.value));
- el.addEventListener("input",update);
- update();
-}
-
-bindSlider("speed","speedVal",v=>v.toFixed(1)+"×");
-bindSlider("heat","heatVal",v=>v+"%");
-bindSlider("moist","moistVal",v=>v+"%");
-bindSlider("wind","windVal",v=>v+" m/s");
-bindSlider("shear","shearVal",v=>v+" m/s");
-
-document.getElementById("pause").onclick=()=>{
- paused=!paused;
- document.getElementById("pause").textContent=
-  paused?"Продолжить":"Пауза";
- updateStats();
-};
-
-document.getElementById("step").onclick=()=>{
- if(paused){
-  modelStep();
-  updateStats();
- }
-};
-
-document.getElementById("reset").onclick=()=>{
- initialize();
- updateStats();
-};
-
-document.getElementById("camera").onclick=()=>{
- camera.position.set(25,18,31);
- controls.target.set(0,HEIGHT/2,0);
- controls.update();
-};
-
-moist.addEventListener("change",()=>{
- // Humidity changes are applied to the next initialization.
-});
-
-/* ---------------- ANIMATION ---------------- */
-
-let last=performance.now();
-let accumulator=0;
-
-function animate(now){
-
- requestAnimationFrame(animate);
-
- const elapsed=Math.min((now-last)/1000,0.05);
- last=now;
-
- controls.update();
-
- if(!paused){
-
-  accumulator+=elapsed*Number(speed.value);
-
-  let steps=0;
-
-  while(accumulator>=0.05 && steps<3){
-   modelStep();
-   accumulator-=0.05;
-   steps++;
-  }
- }
-
- volumeMaterial.uniforms.cameraLocal.value.copy(camera.position);
-
- renderer.render(scene,camera);
-}
-
-window.addEventListener("resize",()=>{
- camera.aspect=window.innerWidth/window.innerHeight;
- camera.updateProjectionMatrix();
-
- renderer.setSize(window.innerWidth,window.innerHeight);
-});
-
-initialize();
-updateStats();
-
-document.getElementById("loading").style.display="none";
-
-requestAnimationFrame(animate);
-
-</script>
+<script type="module" src="./main.js"></script>
 </body>
 </html>
