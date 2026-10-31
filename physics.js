@@ -13,7 +13,6 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 const G=9.81;
 const CP=1004;
-const RD=287;
 const LV=2.5e6;
 const LF=3.34e5;
 const RHO0=1.15;
@@ -38,15 +37,12 @@ export function createModel(settings){
   u:new Float32Array(N),
   v:new Float32Array(N),
   w:new Float32Array(N),
-
   temp:new Float32Array(N),
   qv:new Float32Array(N),
-
   qc:new Float32Array(N),
   qi:new Float32Array(N),
   qr:new Float32Array(N),
   qs:new Float32Array(N),
-
   pressure:new Float32Array(N)
  };
 
@@ -67,7 +63,8 @@ export function createModel(settings){
   cloudTop:0
  };
 
- const get=(a,x,y,z)=>{
+ function sample(a,x,y,z){
+
   x=clamp(x,0,NX-1.001);
   y=clamp(y,0,NY-1.001);
   z=clamp(z,0,NZ-1.001);
@@ -91,7 +88,7 @@ export function createModel(settings){
 
   return (a0*(1-fy)+a1*fy)*(1-fz)
        +(b0*(1-fy)+b1*fy)*fz;
- };
+ }
 
  /* ENVIRONMENT */
 
@@ -135,12 +132,6 @@ export function createModel(settings){
     }
    }
   }
-
-  /*
-   Surface heating perturbations.
-   These are thermal boundary forcing fields,
-   not pre-rendered cloud shapes.
-  */
 
   const thermals=[
    {x:-7,z:-5,r:3.0,t:1.8},
@@ -197,7 +188,7 @@ export function createModel(settings){
       "temp","qv","qc","qi","qr","qs",
       "u","v","w"
      ]){
-      next[key][i]=get(fields[key],bx,by,bz);
+      next[key][i]=sample(fields[key],bx,by,bz);
      }
     }
    }
@@ -357,33 +348,23 @@ export function createModel(settings){
 
      const buoyancy=G*(virtualT-env)/env;
 
-     /* Momentum and buoyancy */
-
      fields.w[i]=clamp(
       fields.w[i]+buoyancy*dt-fields.w[i]*.006*dt,
       -25,
       55
      );
 
-     /* Adiabatic temperature change */
-
      fields.temp[i]-=.0098*fields.w[i]*dt;
-
-     /* Surface heat flux */
 
      if(y<3){
       fields.temp[i]+=
        heat*.045*Math.exp(-y*.8)*dt;
      }
 
-     /* Environmental wind profile */
-
      const targetWind=
       wind+shear*h/(HEIGHT*1000);
 
      fields.u[i]+=(targetWind-fields.u[i])*.012*dt;
-
-     /* Moisture condensation */
 
      const saturation=qsat(fields.temp[i],p);
      const excess=fields.qv[i]-saturation;
@@ -399,11 +380,8 @@ export function createModel(settings){
       fields.qc[i]+=cond;
 
       fields.temp[i]+=cond*LV/(CP*1000);
-     }
 
-     /* Liquid cloud evaporation */
-
-     else if(excess<0 && fields.qc[i]>0){
+     }else if(excess<0 && fields.qc[i]>0){
 
       const evap=Math.min(
        fields.qc[i],
@@ -415,8 +393,6 @@ export function createModel(settings){
 
       fields.temp[i]-=evap*LV/(CP*1000);
      }
-
-     /* Ice deposition and freezing */
 
      if(fields.temp[i]<268.15 && fields.qc[i]>.01){
 
@@ -431,8 +407,6 @@ export function createModel(settings){
       fields.temp[i]+=freezing*LF/(CP*1000);
      }
 
-     /* Ice sublimation */
-
      if(fields.temp[i]>268.15 && fields.qi[i]>.01){
 
       const melting=Math.min(
@@ -446,8 +420,6 @@ export function createModel(settings){
       fields.temp[i]-=melting*LF/(CP*1000);
      }
 
-     /* Cloud water to rain */
-
      if(fields.qc[i]>1.2){
 
       const conversion=Math.min(
@@ -459,8 +431,6 @@ export function createModel(settings){
       fields.qr[i]+=conversion;
      }
 
-     /* Ice aggregation into snow */
-
      if(fields.qi[i]>.5){
 
       const aggregation=Math.min(
@@ -471,8 +441,6 @@ export function createModel(settings){
       fields.qi[i]-=aggregation;
       fields.qs[i]+=aggregation;
      }
-
-     /* Rain evaporation below cloud */
 
      if(fields.qr[i]>.01 && fields.qv[i]<saturation){
 
@@ -486,8 +454,6 @@ export function createModel(settings){
 
       fields.temp[i]-=evaporation*LV/(CP*1000);
      }
-
-     /* Precipitation sedimentation */
 
      const rainFall=Math.min(
       fields.qr[i],
@@ -503,12 +469,9 @@ export function createModel(settings){
      fields.qs[i]-=snowFall;
 
      if(y>1){
-
       fields.qr[idx(x,y-1,z)]+=rainFall*.9;
       fields.qs[idx(x,y-1,z)]+=snowFall*.9;
      }
-
-     /* Numerical bounds */
 
      fields.qv[i]=clamp(fields.qv[i],0,35);
      fields.qc[i]=clamp(fields.qc[i],0,15);
@@ -517,8 +480,6 @@ export function createModel(settings){
      fields.qs[i]=clamp(fields.qs[i],0,20);
 
      fields.temp[i]=clamp(fields.temp[i],180,330);
-
-     /* Diagnostics */
 
      diagnostics.updraft=Math.max(
       diagnostics.updraft,
@@ -571,6 +532,16 @@ export function createModel(settings){
       fields.v[idx(x-1,y,z)]
      )/(2*DX);
 
+     const dudy=(
+      fields.u[idx(x,y+1,z)]-
+      fields.u[idx(x,y-1,z)]
+     )/(2*DY);
+
+     const dvdz=(
+      fields.v[idx(x,y,z+1)]-
+      fields.v[idx(x,y,z-1)]
+     )/(2*DZ);
+
      const dudz=(
       fields.u[idx(x,y,z+1)]-
       fields.u[idx(x,y,z-1)]
@@ -581,17 +552,20 @@ export function createModel(settings){
       fields.w[idx(x-1,y,z)]
      )/(2*DX);
 
-     const dudy=(
-      fields.u[idx(x,y+1,z)]-
-      fields.u[idx(x,y-1,z)]
-     )/(2*DY);
-
      const dwdz=(
       fields.w[idx(x,y,z+1)]-
       fields.w[idx(x,y,z-1)]
      )/(2*DZ);
 
-     const dvd y=0;
+     const ox=dwdz-dvdx;
+     const oy=dudz-dwdx;
+     const oz=dudy-dvdz;
+
+     const magnitude=Math.sqrt(
+      ox*ox+oy*oy+oz*oz
+     );
+
+     maximum=Math.max(maximum,magnitude);
     }
    }
   }
@@ -649,6 +623,8 @@ export function createModel(settings){
   }
 
   diagnostics.time+=dt;
+
+  calculateVorticity();
  }
 
  initialize();
