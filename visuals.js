@@ -32,7 +32,7 @@ export function createVisuals(scene,model){
 
    void main(){
     localPos=position;
-    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);
    }
   `,
 
@@ -51,7 +51,6 @@ export function createVisuals(scene,model){
    vec2 intersectBox(vec3 ro,vec3 rd){
 
     vec3 inv=1./rd;
-
     vec3 t0=(-boxSize*.5-ro)*inv;
     vec3 t1=(boxSize*.5-ro)*inv;
 
@@ -73,15 +72,14 @@ export function createVisuals(scene,model){
      return 0.;
     }
 
-    float base=texture(densityTex,uv).r;
+    float d=texture(densityTex,uv).r;
 
-    return smoothstep(.035,.48,base);
+    return smoothstep(.035,.38,d);
    }
 
    void main(){
 
     vec3 rd=normalize(localPos-cameraLocal);
-
     vec2 hit=intersectBox(cameraLocal,rd);
 
     float start=max(hit.x,0.);
@@ -97,29 +95,29 @@ export function createVisuals(scene,model){
     for(float t=start;t<finish;t+=stepSize){
 
      vec3 p=cameraLocal+rd*t;
-
      float d=densityAt(p);
 
-     if(d>.015){
+     if(d>.01){
 
       float h=clamp(p.y/boxSize.y+.5,0.,1.);
 
-      vec3 cloud=mix(
-       vec3(.40,.44,.49),
-       vec3(.98,.99,1.),
-       smoothstep(.05,.9,h)
+      vec3 cloudColor=mix(
+       vec3(.36,.40,.46),
+       vec3(.97,.98,1.),
+       smoothstep(.05,.78,h)
       );
 
-      float light=.65+.35*max(dot(-rd,lightDir),0.);
+      float lighting=.58+
+       .42*max(dot(-rd,lightDir),0.);
 
-      cloud*=light;
+      cloudColor*=lighting;
 
-      float a=d*.12;
+      float a=d*.105;
 
-      color+=(1.-alpha)*cloud*a;
+      color+=(1.-alpha)*cloudColor*a;
       alpha+=(1.-alpha)*a;
 
-      if(alpha>.96) break;
+      if(alpha>.97) break;
      }
     }
 
@@ -142,26 +140,43 @@ export function createVisuals(scene,model){
  volume.position.y=HEIGHT/2;
  scene.add(volume);
 
+ let updateTimer=0;
+
  function update(dt,now,camera){
 
-  const qc=model.fields.qc;
+  updateTimer+=dt;
 
-  let ptr=0;
+  if(updateTimer>=.1){
 
-  for(let z=0;z<NZ;z++){
-   for(let y=0;y<NY;y++){
-    for(let x=0;x<NX;x++){
+   updateTimer=0;
 
-     const q=qc[x+NX*(y+NY*z)];
+   const qc=model.fields.qc;
+   const qi=model.fields.qi;
 
-     const d=clamp(q/1.2,0,1);
+   let ptr=0;
 
-     data[ptr++]=Math.round(d*255);
+   for(let z=0;z<NZ;z++){
+    for(let y=0;y<NY;y++){
+     for(let x=0;x<NX;x++){
+
+      const i=x+NX*(y+NY*z);
+
+      const liquid=qc[i];
+      const ice=qi[i];
+
+      const total=liquid+ice*.85;
+
+      const density=clamp(total/1.4,0,1);
+
+      data[ptr++]=Math.round(
+       Math.pow(density,.85)*255
+      );
+     }
     }
    }
-  }
 
-  texture.needsUpdate=true;
+   texture.needsUpdate=true;
+  }
 
   volume.updateMatrixWorld(true);
 
