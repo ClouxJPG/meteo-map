@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>StormLab 3D</title>
+
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#9dbbd3;color:#eaf4ff;font-family:Arial,sans-serif}
@@ -38,6 +39,17 @@ button.primary{background:#0879b7;border-color:#30a8eb}
  .brand{font-size:14px}
 }
 </style>
+
+<!-- Import map: позволяет OrbitControls найти модуль three -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+
 </head>
 <body>
 <div id="view"></div>
