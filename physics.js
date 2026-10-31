@@ -11,12 +11,12 @@ export const DEPTH=NZ*DZ/1000;
 const idx=(x,y,z)=>x+NX*(y+NY*z);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-const GRAVITY=9.81;
+const G=9.81;
 const CP=1004;
 const RD=287;
-const RV=461.5;
 const LV=2.5e6;
-const EPSILON=RD/RV;
+const LF=3.34e5;
+const RHO0=1.15;
 
 export function envTemp(h){
  return 299.15-.0062*h;
@@ -34,35 +34,40 @@ export function qsat(T,p){
 
 export function createModel(settings){
 
- const f={
+ const fields={
   u:new Float32Array(N),
   v:new Float32Array(N),
   w:new Float32Array(N),
+
   temp:new Float32Array(N),
   qv:new Float32Array(N),
+
   qc:new Float32Array(N),
-  qr:new Float32Array(N)
+  qi:new Float32Array(N),
+  qr:new Float32Array(N),
+  qs:new Float32Array(N),
+
+  pressure:new Float32Array(N)
  };
 
- const next={
-  temp:new Float32Array(N),
-  qv:new Float32Array(N),
-  qc:new Float32Array(N),
-  qr:new Float32Array(N),
-  u:new Float32Array(N),
-  v:new Float32Array(N),
-  w:new Float32Array(N)
- };
+ const next={};
+
+ for(const key of Object.keys(fields)){
+  next[key]=new Float32Array(N);
+ }
 
  const diagnostics={
   updraft:0,
+  downdraft:0,
   cloud:0,
+  ice:0,
   temp:0,
-  time:0
+  time:0,
+  maxVorticity:0,
+  cloudTop:0
  };
 
- function sample(arr,x,y,z){
-
+ const get=(a,x,y,z)=>{
   x=clamp(x,0,NX-1.001);
   y=clamp(y,0,NY-1.001);
   z=clamp(z,0,NZ-1.001);
@@ -79,23 +84,31 @@ export function createModel(settings){
   const fy=y-y0;
   const fz=z-z0;
 
-  const a=arr[idx(x0,y0,z0)]*(1-fx)+arr[idx(x1,y0,z0)]*fx;
-  const b=arr[idx(x0,y1,z0)]*(1-fx)+arr[idx(x1,y1,z0)]*fx;
-  const c=arr[idx(x0,y0,z1)]*(1-fx)+arr[idx(x1,y0,z1)]*fx;
-  const d=arr[idx(x0,y1,z1)]*(1-fx)+arr[idx(x1,y1,z1)]*fx;
+  const a0=a[idx(x0,y0,z0)]*(1-fx)+a[idx(x1,y0,z0)]*fx;
+  const a1=a[idx(x0,y1,z0)]*(1-fx)+a[idx(x1,y1,z0)]*fx;
+  const b0=a[idx(x0,y0,z1)]*(1-fx)+a[idx(x1,y0,z1)]*fx;
+  const b1=a[idx(x0,y1,z1)]*(1-fx)+a[idx(x1,y1,z1)]*fx;
 
-  return (a*(1-fy)+b*fy)*(1-fz)
-       +(c*(1-fy)+d*fy)*fz;
- }
+  return (a0*(1-fy)+a1*fy)*(1-fz)
+       +(b0*(1-fy)+b1*fy)*fz;
+ };
 
- /* INITIAL ATMOSPHERE */
+ /* ENVIRONMENT */
 
  function initialize(){
 
+  for(const key of Object.keys(fields)){
+   fields[key].fill(0);
+  }
+
   diagnostics.updraft=0;
+  diagnostics.downdraft=0;
   diagnostics.cloud=0;
+  diagnostics.ice=0;
   diagnostics.temp=0;
   diagnostics.time=0;
+  diagnostics.maxVorticity=0;
+  diagnostics.cloudTop=0;
 
   const humidity=Number(settings.moist())/100;
   const wind=Number(settings.wind());
@@ -113,29 +126,27 @@ export function createModel(settings){
 
      const i=idx(x,y,z);
 
-     f.temp[i]=T;
-     f.qv[i]=vapor;
-     f.qc[i]=0;
-     f.qr[i]=0;
+     fields.temp[i]=T;
+     fields.qv[i]=vapor;
 
-     f.u[i]=wind+shear*h/(HEIGHT*1000);
-     f.v[i]=0;
-     f.w[i]=0;
+     fields.u[i]=wind+shear*h/(HEIGHT*1000);
+     fields.v[i]=0;
+     fields.w[i]=0;
     }
    }
   }
 
   /*
-   Initial surface thermals.
-   Their horizontal distribution is irregular,
-   rather than a single circular cloud shape.
+   Surface heating perturbations.
+   These are thermal boundary forcing fields,
+   not pre-rendered cloud shapes.
   */
 
   const thermals=[
-   {x:-7,z:-5,r:3.2,t:1.6},
-   {x:5,z:4,r:3.8,t:1.25},
-   {x:1,z:-9,r:2.8,t:.9},
-   {x:-9,z:8,r:2.5,t:.75}
+   {x:-7,z:-5,r:3.0,t:1.8},
+   {x:5,z:4,r:3.5,t:1.5},
+   {x:1,z:-9,r:2.8,t:1.1},
+   {x:-9,z:8,r:2.5,t:.9}
   ];
 
   for(let z=0;z<NZ;z++){
@@ -157,22 +168,19 @@ export function createModel(settings){
     }
 
     for(let y=0;y<3;y++){
-
-     const verticalWeight=Math.exp(-y*.7);
      const i=idx(x,y,z);
-
-     f.temp[i]+=perturbation*verticalWeight;
+     fields.temp[i]+=perturbation*Math.exp(-y*.65);
     }
    }
   }
  }
 
- /* ADVECTION */
+ /* SEMI-LAGRANGIAN TRANSPORT */
 
  function advect(dt){
 
-  for(const k of Object.keys(next)){
-   next[k].set(f[k]);
+  for(const key of Object.keys(fields)){
+   next[key].set(fields[key]);
   }
 
   for(let z=1;z<NZ-1;z++){
@@ -181,24 +189,89 @@ export function createModel(settings){
 
      const i=idx(x,y,z);
 
-     const bx=x-f.u[i]*dt/DX;
-     const by=y-f.w[i]*dt/DY;
-     const bz=z-f.v[i]*dt/DZ;
+     const bx=x-fields.u[i]*dt/DX;
+     const by=y-fields.w[i]*dt/DY;
+     const bz=z-fields.v[i]*dt/DZ;
 
-     next.temp[i]=sample(f.temp,bx,by,bz);
-     next.qv[i]=sample(f.qv,bx,by,bz);
-     next.qc[i]=sample(f.qc,bx,by,bz);
-     next.qr[i]=sample(f.qr,bx,by,bz);
-
-     next.u[i]=sample(f.u,bx,by,bz);
-     next.v[i]=sample(f.v,bx,by,bz);
-     next.w[i]=sample(f.w,bx,by,bz);
+     for(const key of [
+      "temp","qv","qc","qi","qr","qs",
+      "u","v","w"
+     ]){
+      next[key][i]=get(fields[key],bx,by,bz);
+     }
     }
    }
   }
 
-  for(const k of Object.keys(f)){
-   f[k].set(next[k]);
+  for(const key of Object.keys(fields)){
+   fields[key].set(next[key]);
+  }
+ }
+
+ /* PRESSURE PROJECTION */
+
+ function project(dt){
+
+  const p=fields.pressure;
+  const div=next.pressure;
+
+  p.fill(0);
+  div.fill(0);
+
+  for(let z=1;z<NZ-1;z++){
+   for(let y=1;y<NY-1;y++){
+    for(let x=1;x<NX-1;x++){
+
+     const i=idx(x,y,z);
+
+     div[i]=
+      (fields.u[idx(x+1,y,z)]-fields.u[idx(x-1,y,z)])/(2*DX)+
+      (fields.w[idx(x,y+1,z)]-fields.w[idx(x,y-1,z)])/(2*DY)+
+      (fields.v[idx(x,y,z+1)]-fields.v[idx(x,y,z-1)])/(2*DZ);
+    }
+   }
+  }
+
+  const ax=1/(DX*DX);
+  const ay=1/(DY*DY);
+  const az=1/(DZ*DZ);
+  const denom=2*(ax+ay+az);
+
+  for(let iteration=0;iteration<12;iteration++){
+
+   next.pressure.set(p);
+
+   for(let z=1;z<NZ-1;z++){
+    for(let y=1;y<NY-1;y++){
+     for(let x=1;x<NX-1;x++){
+
+      const i=idx(x,y,z);
+
+      const neighbors=
+       (p[idx(x-1,y,z)]+p[idx(x+1,y,z)])*ax+
+       (p[idx(x,y-1,z)]+p[idx(x,y+1,z)])*ay+
+       (p[idx(x,y,z-1)]+p[idx(x,y,z+1)])*az;
+
+      next.pressure[i]=
+       (neighbors-RHO0*div[i]/Math.max(dt,.001))/denom;
+     }
+    }
+   }
+
+   p.set(next.pressure);
+  }
+
+  for(let z=1;z<NZ-1;z++){
+   for(let y=1;y<NY-1;y++){
+    for(let x=1;x<NX-1;x++){
+
+     const i=idx(x,y,z);
+
+     fields.u[i]-=dt*(p[idx(x+1,y,z)]-p[idx(x-1,y,z)])/(2*DX*RHO0);
+     fields.w[i]-=dt*(p[idx(x,y+1,z)]-p[idx(x,y-1,z)])/(2*DY*RHO0);
+     fields.v[i]-=dt*(p[idx(x,y,z+1)]-p[idx(x,y,z-1)])/(2*DZ*RHO0);
+    }
+   }
   }
  }
 
@@ -207,20 +280,22 @@ export function createModel(settings){
  function diffuse(dt){
 
   const coefficients={
-   temp:.018,
-   qv:.012,
-   qc:.008,
-   qr:.006,
-   u:.025,
-   v:.025,
-   w:.035
+   temp:.012,
+   qv:.009,
+   qc:.006,
+   qi:.006,
+   qr:.004,
+   qs:.004,
+   u:.018,
+   v:.018,
+   w:.018
   };
 
-  for(const k of Object.keys(f)){
+  for(const key of Object.keys(coefficients)){
 
-   const arr=f[k];
-   const out=next[k];
-   const amount=coefficients[k]*dt;
+   const arr=fields[key];
+   const out=next[key];
+   const amount=coefficients[key]*dt;
 
    out.set(arr);
 
@@ -231,12 +306,9 @@ export function createModel(settings){
       const i=idx(x,y,z);
 
       const neighbors=(
-       arr[idx(x-1,y,z)]+
-       arr[idx(x+1,y,z)]+
-       arr[idx(x,y-1,z)]+
-       arr[idx(x,y+1,z)]+
-       arr[idx(x,y,z-1)]+
-       arr[idx(x,y,z+1)]
+       arr[idx(x-1,y,z)]+arr[idx(x+1,y,z)]+
+       arr[idx(x,y-1,z)]+arr[idx(x,y+1,z)]+
+       arr[idx(x,y,z-1)]+arr[idx(x,y,z+1)]
       )/6;
 
       out[i]=arr[i]+(neighbors-arr[i])*amount;
@@ -248,7 +320,7 @@ export function createModel(settings){
   }
  }
 
- /* THERMODYNAMICS AND BUOYANCY */
+ /* THERMODYNAMICS AND CLOUD MICROPHYSICS */
 
  function thermodynamics(dt){
 
@@ -257,8 +329,11 @@ export function createModel(settings){
   const shear=Number(settings.shear());
 
   diagnostics.updraft=0;
+  diagnostics.downdraft=0;
   diagnostics.cloud=0;
+  diagnostics.ice=0;
   diagnostics.temp=-100;
+  diagnostics.cloudTop=0;
 
   for(let z=1;z<NZ-1;z++){
    for(let y=1;y<NY-1;y++){
@@ -271,184 +346,295 @@ export function createModel(settings){
 
      const i=idx(x,y,z);
 
-     /* Moist-air virtual temperature */
-
-     const vapor=f.qv[i]/1000;
-     const condensate=(f.qc[i]+f.qr[i])/1000;
+     const vapor=fields.qv[i]/1000;
+     const condensate=(
+      fields.qc[i]+fields.qi[i]+
+      fields.qr[i]+fields.qs[i]
+     )/1000;
 
      const virtualT=
-      f.temp[i]*(1+.61*vapor-condensate);
+      fields.temp[i]*(1+.61*vapor-condensate);
 
-     /* Buoyancy */
+     const buoyancy=G*(virtualT-env)/env;
 
-     const buoyancy=
-      GRAVITY*(virtualT-env)/env;
+     /* Momentum and buoyancy */
 
-     /*
-      Vertical momentum.
-      Drag and mixing limit numerical acceleration.
-     */
-
-     f.w[i]=clamp(
-      f.w[i]+buoyancy*dt-f.w[i]*.012*dt,
-      -18,
-      45
+     fields.w[i]=clamp(
+      fields.w[i]+buoyancy*dt-fields.w[i]*.006*dt,
+      -25,
+      55
      );
 
-     /* Adiabatic cooling in rising air */
+     /* Adiabatic temperature change */
 
-     f.temp[i]-=.0098*f.w[i]*dt;
+     fields.temp[i]-=.0098*fields.w[i]*dt;
 
-     /* Surface sensible heat flux */
+     /* Surface heat flux */
 
      if(y<3){
-
-      const surfaceWeight=Math.exp(-y*.85);
-
-      f.temp[i]+=
-       heat*.035*surfaceWeight*dt;
+      fields.temp[i]+=
+       heat*.045*Math.exp(-y*.8)*dt;
      }
 
-     /* Wind profile and vertical shear */
+     /* Environmental wind profile */
 
      const targetWind=
       wind+shear*h/(HEIGHT*1000);
 
-     f.u[i]+=(targetWind-f.u[i])*.018*dt;
+     fields.u[i]+=(targetWind-fields.u[i])*.012*dt;
 
      /* Moisture condensation */
 
-     const saturation=qsat(f.temp[i],p);
-     const excess=f.qv[i]-saturation;
+     const saturation=qsat(fields.temp[i],p);
+     const excess=fields.qv[i]-saturation;
 
      if(excess>0){
 
-      const condensationRate=
-       Math.min(excess,excess*(.12*dt));
-
-      f.qv[i]-=condensationRate;
-      f.qc[i]+=condensationRate;
-
-      /* Latent heat release */
-
-      f.temp[i]+=
-       condensationRate*LV/(CP*1000);
-
-     }else if(excess<0 && f.qc[i]>0){
-
-      const evaporation=Math.min(
-       f.qc[i],
-       -excess*.035*dt
+      const cond=Math.min(
+       excess,
+       excess*(.20*dt)
       );
 
-      f.qc[i]-=evaporation;
-      f.qv[i]+=evaporation;
+      fields.qv[i]-=cond;
+      fields.qc[i]+=cond;
 
-      f.temp[i]-=
-       evaporation*LV/(CP*1000);
+      fields.temp[i]+=cond*LV/(CP*1000);
      }
 
-     /* Cloud water to rain water */
+     /* Liquid cloud evaporation */
 
-     if(f.qc[i]>1.5){
+     else if(excess<0 && fields.qc[i]>0){
+
+      const evap=Math.min(
+       fields.qc[i],
+       -excess*.045*dt
+      );
+
+      fields.qc[i]-=evap;
+      fields.qv[i]+=evap;
+
+      fields.temp[i]-=evap*LV/(CP*1000);
+     }
+
+     /* Ice deposition and freezing */
+
+     if(fields.temp[i]<268.15 && fields.qc[i]>.01){
+
+      const freezing=Math.min(
+       fields.qc[i],
+       fields.qc[i]*.025*dt
+      );
+
+      fields.qc[i]-=freezing;
+      fields.qi[i]+=freezing;
+
+      fields.temp[i]+=freezing*LF/(CP*1000);
+     }
+
+     /* Ice sublimation */
+
+     if(fields.temp[i]>268.15 && fields.qi[i]>.01){
+
+      const melting=Math.min(
+       fields.qi[i],
+       fields.qi[i]*.012*dt
+      );
+
+      fields.qi[i]-=melting;
+      fields.qc[i]+=melting;
+
+      fields.temp[i]-=melting*LF/(CP*1000);
+     }
+
+     /* Cloud water to rain */
+
+     if(fields.qc[i]>1.2){
 
       const conversion=Math.min(
-       f.qc[i],
-       (f.qc[i]-1.5)*.012*dt
+       fields.qc[i],
+       (fields.qc[i]-1.2)*.008*dt
       );
 
-      f.qc[i]-=conversion;
-      f.qr[i]+=conversion;
+      fields.qc[i]-=conversion;
+      fields.qr[i]+=conversion;
      }
 
-     /* Precipitation fallout */
+     /* Ice aggregation into snow */
 
-     const fall=Math.min(
-      f.qr[i],
-      f.qr[i]*.018*dt
+     if(fields.qi[i]>.5){
+
+      const aggregation=Math.min(
+       fields.qi[i],
+       (fields.qi[i]-.5)*.004*dt
+      );
+
+      fields.qi[i]-=aggregation;
+      fields.qs[i]+=aggregation;
+     }
+
+     /* Rain evaporation below cloud */
+
+     if(fields.qr[i]>.01 && fields.qv[i]<saturation){
+
+      const evaporation=Math.min(
+       fields.qr[i],
+       (saturation-fields.qv[i])*.006*dt
+      );
+
+      fields.qr[i]-=evaporation;
+      fields.qv[i]+=evaporation;
+
+      fields.temp[i]-=evaporation*LV/(CP*1000);
+     }
+
+     /* Precipitation sedimentation */
+
+     const rainFall=Math.min(
+      fields.qr[i],
+      fields.qr[i]*.025*dt
      );
 
-     f.qr[i]-=fall;
+     const snowFall=Math.min(
+      fields.qs[i],
+      fields.qs[i]*.012*dt
+     );
+
+     fields.qr[i]-=rainFall;
+     fields.qs[i]-=snowFall;
 
      if(y>1){
-      f.qr[idx(x,y-1,z)]+=fall*.85;
+
+      fields.qr[idx(x,y-1,z)]+=rainFall*.9;
+      fields.qs[idx(x,y-1,z)]+=snowFall*.9;
      }
 
-     /* Numerical limits */
+     /* Numerical bounds */
 
-     f.qv[i]=clamp(f.qv[i],0,35);
-     f.qc[i]=clamp(f.qc[i],0,15);
-     f.qr[i]=clamp(f.qr[i],0,25);
+     fields.qv[i]=clamp(fields.qv[i],0,35);
+     fields.qc[i]=clamp(fields.qc[i],0,15);
+     fields.qi[i]=clamp(fields.qi[i],0,15);
+     fields.qr[i]=clamp(fields.qr[i],0,20);
+     fields.qs[i]=clamp(fields.qs[i],0,20);
 
-     f.temp[i]=clamp(f.temp[i],180,330);
+     fields.temp[i]=clamp(fields.temp[i],180,330);
 
      /* Diagnostics */
 
      diagnostics.updraft=Math.max(
       diagnostics.updraft,
-      f.w[i]
+      fields.w[i]
+     );
+
+     diagnostics.downdraft=Math.min(
+      diagnostics.downdraft,
+      fields.w[i]
      );
 
      diagnostics.cloud=Math.max(
       diagnostics.cloud,
-      f.qc[i]
+      fields.qc[i]
+     );
+
+     diagnostics.ice=Math.max(
+      diagnostics.ice,
+      fields.qi[i]
      );
 
      diagnostics.temp=Math.max(
       diagnostics.temp,
-      f.temp[i]-273.15
+      fields.temp[i]-273.15
      );
+
+     if(fields.qc[i]+fields.qi[i]>.08){
+      diagnostics.cloudTop=Math.max(
+       diagnostics.cloudTop,
+       h
+      );
+     }
     }
    }
   }
  }
 
- /* BOUNDARY CONDITIONS */
+ /* VORTICITY DIAGNOSTIC */
+
+ function calculateVorticity(){
+
+  let maximum=0;
+
+  for(let z=1;z<NZ-1;z++){
+   for(let y=1;y<NY-1;y++){
+    for(let x=1;x<NX-1;x++){
+
+     const dvdx=(
+      fields.v[idx(x+1,y,z)]-
+      fields.v[idx(x-1,y,z)]
+     )/(2*DX);
+
+     const dudz=(
+      fields.u[idx(x,y,z+1)]-
+      fields.u[idx(x,y,z-1)]
+     )/(2*DZ);
+
+     const dwdx=(
+      fields.w[idx(x+1,y,z)]-
+      fields.w[idx(x-1,y,z)]
+     )/(2*DX);
+
+     const dudy=(
+      fields.u[idx(x,y+1,z)]-
+      fields.u[idx(x,y-1,z)]
+     )/(2*DY);
+
+     const dwdz=(
+      fields.w[idx(x,y,z+1)]-
+      fields.w[idx(x,y,z-1)]
+     )/(2*DZ);
+
+     const dvd y=0;
+    }
+   }
+  }
+
+  diagnostics.maxVorticity=maximum;
+ }
+
+ /* BOUNDARIES */
 
  function boundaries(){
 
   for(let z=0;z<NZ;z++){
    for(let x=0;x<NX;x++){
 
-    for(const y of [0,NY-1]){
+    const bottom=idx(x,0,z);
+    const top=idx(x,NY-1,z);
 
-     const i=idx(x,y,z);
+    fields.w[bottom]=0;
+    fields.w[top]=0;
 
-     f.w[i]=0;
-
-     f.qc[i]=0;
-     f.qr[i]=0;
-
-     if(y===NY-1){
-      f.qv[i]=Math.min(f.qv[i],5);
-     }
-    }
+    fields.qc[top]=0;
+    fields.qi[top]=0;
+    fields.qr[top]=0;
+    fields.qs[top]=0;
    }
   }
 
   for(let y=0;y<NY;y++){
    for(let z=0;z<NZ;z++){
-
-    f.w[idx(0,y,z)]=0;
-    f.w[idx(NX-1,y,z)]=0;
+    fields.w[idx(0,y,z)]=0;
+    fields.w[idx(NX-1,y,z)]=0;
    }
 
    for(let x=0;x<NX;x++){
-
-    f.w[idx(x,y,0)]=0;
-    f.w[idx(x,y,NZ-1)]=0;
+    fields.w[idx(x,y,0)]=0;
+    fields.w[idx(x,y,NZ-1)]=0;
    }
   }
  }
 
- /* MODEL STEP */
+ /* MODEL INTEGRATION */
 
  function step(dt=.35){
-
-  /*
-   Split the model step into smaller increments
-   for improved numerical stability.
-  */
 
   const substeps=Math.max(1,Math.ceil(dt/.175));
   const h=dt/substeps;
@@ -458,6 +644,7 @@ export function createModel(settings){
    advect(h);
    diffuse(h);
    thermodynamics(h);
+   project(h);
    boundaries();
   }
 
@@ -467,7 +654,7 @@ export function createModel(settings){
  initialize();
 
  return {
-  fields:f,
+  fields,
   diagnostics,
   initialize,
   step,
