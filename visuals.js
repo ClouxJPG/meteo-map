@@ -125,10 +125,9 @@ export function createVisuals(scene,model){
 
     float base=texture(densityTex,uv).r;
 
-    if(base<.018) return 0.;
+    if(base<.025) return 0.;
 
     vec3 q=p*.8+vec3(clock*.004,0.,clock*.002);
-
     float n=fbm(q);
 
     float erosion=mix(.04,.16,n);
@@ -153,7 +152,6 @@ export function createVisuals(scene,model){
 
     for(float t=start;t<finish;t+=stepSize){
      vec3 p=cameraLocal+rd*t;
-
      float d=densityAt(p);
 
      if(d>.012){
@@ -197,39 +195,6 @@ export function createVisuals(scene,model){
 
  volume.position.y=HEIGHT/2;
  scene.add(volume);
-
- /* RAIN PARTICLES */
-
- const rainCount=900;
- const rainPositions=new Float32Array(rainCount*3);
-
- const rainGeometry=new THREE.BufferGeometry();
-
- rainGeometry.setAttribute(
-  "position",
-  new THREE.BufferAttribute(rainPositions,3)
- );
-
- const rainMaterial=new THREE.PointsMaterial({
-  color:0xb8d9f2,
-  size:.055,
-  transparent:true,
-  opacity:.55,
-  depthWrite:false
- });
-
- const rain=new THREE.Points(
-  rainGeometry,
-  rainMaterial
- );
-
- scene.add(rain);
-
- for(let i=0;i<rainCount;i++){
-  rainPositions[i*3]=(Math.random()-.5)*WIDTH;
-  rainPositions[i*3+1]=Math.random()*HEIGHT;
-  rainPositions[i*3+2]=(Math.random()-.5)*DEPTH;
- }
 
  /* LIGHTNING */
 
@@ -300,7 +265,6 @@ export function createVisuals(scene,model){
      for(let x=0;x<NX;x++){
 
       const q=qc[x+NX*(y+NY*z)];
-
       const d=clamp((q-.015)/.65,0,1);
 
       data[ptr++]=Math.round(Math.pow(d,.8)*255);
@@ -318,24 +282,6 @@ export function createVisuals(scene,model){
   );
 
   material.uniforms.clock.value=now;
-
-  /* RAIN MOVEMENT */
-
-  const positions=rainGeometry.attributes.position.array;
-
-  for(let i=0;i<rainCount;i++){
-   const j=i*3;
-
-   positions[j+1]-=dt*5.5;
-
-   if(positions[j+1]<0){
-    positions[j]=(Math.random()-.5)*WIDTH;
-    positions[j+1]=HEIGHT;
-    positions[j+2]=(Math.random()-.5)*DEPTH;
-   }
-  }
-
-  rainGeometry.attributes.position.needsUpdate=true;
 
   /* LIGHTNING TIMER */
 
@@ -362,14 +308,16 @@ export function createVisuals(scene,model){
  /* DISPOSE */
 
  function dispose(){
-  scene.remove(volume,rain,lightningGroup,flash);
+  scene.remove(volume,lightningGroup,flash);
 
   volume.geometry.dispose();
   material.dispose();
   texture.dispose();
 
-  rain.geometry.dispose();
-  rain.material.dispose();
+  lightningGroup.traverse(object=>{
+   if(object.geometry) object.geometry.dispose();
+   if(object.material) object.material.dispose();
+  });
  }
 
  return {
