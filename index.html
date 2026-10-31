@@ -1,345 +1,936 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#071522">
-<title>StormLab 3D — Atmospheric Simulator</title>
+<title>StormLab 3D — Atmospheric Simulation</title>
+
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#071522;color:#eaf5ff;font-family:Arial,system-ui,sans-serif}
-#stage{position:fixed;inset:0;touch-action:none}
-canvas{width:100%;height:100%;display:block}
-#top{position:fixed;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;pointer-events:none;z-index:5;gap:10px}
-.brand,.status,.panel,.hint{background:rgba(7,20,34,.84);border:1px solid #ffffff20;backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
-.brand{padding:11px 14px;border-radius:12px}.brand b{font-size:14px;letter-spacing:3px}.brand small{display:block;color:#91aec5;font-size:9px;margin-top:4px}
-.status{padding:10px;border-radius:10px;font-size:11px}
-.panel{position:fixed;z-index:6;right:12px;top:75px;bottom:12px;width:290px;overflow:auto;border-radius:15px;padding:13px}
-h3{font-size:11px;letter-spacing:2px;color:#a9c9e3}.section{border-top:1px solid #ffffff17;padding:10px 0}
-.row{display:flex;justify-content:space-between;align-items:center;margin:7px 0}label{font-size:12px;color:#d4e5f3}.val{font-size:11px;color:#7bcaff}
-input[type=range]{width:100%;accent-color:#76c6ff}
-select,button{background:#142e43;color:white;border:1px solid #38566d;border-radius:8px;padding:9px;font-size:11px}
-select{width:100%}button{cursor:pointer}button:active{transform:scale(.98)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.toggle{display:flex;justify-content:space-between;margin:10px 0;font-size:12px}.toggle input{accent-color:#77caff}
-#hint{position:fixed;left:12px;bottom:12px;z-index:4;padding:10px 12px;border-radius:10px;color:#c2d8e9;font-size:10px;line-height:1.5;max-width:calc(100% - 330px)}
-#mobile{display:none;position:fixed;right:12px;top:65px;z-index:8}
-#loading{position:fixed;inset:0;background:#071522;z-index:20;display:grid;place-items:center;transition:opacity .5s}#loading b{letter-spacing:4px}
-#error{display:none;position:fixed;z-index:30;inset:15px;background:#1a1010;color:#fff;padding:20px;border:1px solid #f66;border-radius:12px;white-space:pre-wrap;overflow:auto;font-size:12px}
-@media(max-width:700px){.panel{top:auto;left:9px;right:9px;bottom:9px;width:auto;max-height:46vh;padding:11px}.panel.hidden{display:none}#mobile{display:block}#hint{bottom:calc(46vh + 17px);left:10px;max-width:95%}.brand{padding:8px 10px}}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#a9c5db;color:#eaf4ff;font-family:Arial,sans-serif}
+#view{position:absolute;inset:0}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#top{
+ position:absolute;top:0;left:0;right:0;height:55px;
+ display:flex;align-items:center;justify-content:space-between;
+ padding:0 16px;background:linear-gradient(#071523dd,#07152300);
+ pointer-events:none
+}
+.brand{font-size:17px;font-weight:800;letter-spacing:1.5px}
+.brand span{color:#62c9ff}
+.status{font-size:11px;color:#b8d3e8}
+#panel{
+ position:absolute;left:12px;top:68px;width:245px;max-height:calc(100% - 82px);
+ overflow-y:auto;background:#071725eF;border:1px solid #34516a;
+ border-radius:12px;padding:13px;backdrop-filter:blur(12px);
+ scrollbar-width:thin
+}
+h3{font-size:11px;letter-spacing:1.4px;color:#80caff;margin:4px 0 12px}
+.group{border-top:1px solid #294154;padding:11px 0}
+.label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:7px;color:#d6e6f3}
+.value{color:#75caff;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:#50baff;height:18px}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+button{
+ border:1px solid #41637c;background:#17364d;color:#eaf6ff;
+ border-radius:7px;padding:9px 7px;font-size:12px;font-weight:600
+}
+button:active{background:#28628b}
+button.primary{background:#0879b7;border-color:#30a8eb}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.stat{background:#102a3c;border-radius:7px;padding:8px}
+.stat small{display:block;font-size:9px;color:#91afc5;margin-bottom:5px}
+.stat strong{font-size:15px;color:#e5f5ff;font-variant-numeric:tabular-nums}
+#help{
+ position:absolute;right:12px;bottom:12px;background:#071725c9;
+ border:1px solid #34516a;border-radius:8px;padding:9px 12px;
+ color:#c6dceb;font-size:10px;line-height:1.7;pointer-events:none
+}
+#loading{
+ position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+ background:#101f2d;color:#d9efff;font-size:14px;z-index:10
+}
+@media(max-width:600px){
+ #panel{width:205px;top:61px;left:8px;padding:10px;max-height:calc(100% - 75px)}
+ #top{padding:0 10px}
+ .brand{font-size:14px}
+ #help{right:8px;bottom:8px;font-size:9px}
+}
 </style>
 </head>
+
 <body>
-<div id="stage"></div><div id="error"></div>
-<div id="loading"><div style="text-align:center"><b>STORMLAB 3D</b><div style="font-size:10px;color:#8caac0;margin-top:9px">INITIALIZING ATMOSPHERE</div></div></div>
-<div id="top"><div class="brand"><b>STORMLAB <span style="color:#76caff">3D</span></b><small>VOLUMETRIC ATMOSPHERIC SIMULATOR</small></div><div class="status" id="fps">STARTING GPU</div></div>
-<button id="mobile">ПАНЕЛЬ</button>
-<div class="panel" id="panel">
- <h3>ATMOSPHERIC PARAMETERS</h3>
- <div class="section"><label>Сценарий облачности</label><select id="preset"><option value="severe">Severe convection</option><option value="supercell">Supercell environment</option><option value="tower">Towering cumulus</option><option value="mixed">Mixed cloud field</option><option value="stratus">Stratocumulus</option></select></div>
- <div class="section">
-  <div class="row"><label>Плотность облаков</label><span class="val" id="densityV">1.00</span></div><input id="density" type="range" min=".3" max="2" step=".01" value="1">
-  <div class="row"><label>Покрытие неба</label><span class="val" id="coverageV">75%</span></div><input id="coverage" type="range" min="15" max="100" value="75">
-  <div class="row"><label>Детализация</label><span class="val" id="qualityV">1</span></div><input id="quality" type="range" min="1" max="3" value="1">
- </div>
- <div class="section">
-  <div class="row"><label>Ветер</label><span class="val" id="windV">18 м/с</span></div><input id="wind" type="range" min="0" max="55" value="18">
-  <div class="row"><label>Высота солнца</label><span class="val" id="sunV">35°</span></div><input id="sun" type="range" min="5" max="85" value="35">
-  <div class="row"><label>Конвекция</label><span class="val" id="growthV">65%</span></div><input id="growth" type="range" min="0" max="100" value="65">
- </div>
- <div class="section"><div class="grid"><button id="pause">Ⅱ Пауза</button><button id="reset">↺ Камера</button><button id="lightning">⚡ Молния</button><button id="scientific">Научный режим</button></div>
-  <div class="toggle"><span>Анимация</span><input id="animation" type="checkbox" checked></div>
-  <div class="toggle"><span>Контуры высот</span><input id="contours" type="checkbox" checked></div>
- </div>
- <div class="section" style="font-size:10px;color:#91abc0;line-height:1.5">Облака формируются процедурно в фиксированных мировых координатах. Башни, наковальни и Overshooting Tops — визуальные приближения, а не результат численного прогноза атмосферы.</div>
+<div id="view"></div>
+
+<div id="loading">Инициализация атмосферной модели…</div>
+
+<div id="top">
+ <div class="brand">STORM<span>LAB</span> 3D</div>
+ <div class="status" id="status">INITIALIZING</div>
 </div>
-<div id="hint" class="hint">Перетаскивание — вращение камеры · колесо — приближение. Два пальца — масштабирование и панорамирование.</div>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+
+<div id="panel">
+ <h3>ATMOSPHERIC MODEL</h3>
+
+ <div class="buttons">
+  <button class="primary" id="pause">Пауза</button>
+  <button id="step">Шаг модели</button>
+  <button id="reset">Перезапуск</button>
+  <button id="camera">Сброс камеры</button>
+ </div>
+
+ <div class="group">
+  <div class="label"><span>Скорость модели</span><span class="value" id="speedVal">1.0×</span></div>
+  <input id="speed" type="range" min="0.2" max="4" step="0.1" value="1">
+ </div>
+
+ <h3>BOUNDARY CONDITIONS</h3>
+
+ <div class="group">
+  <div class="label"><span>Нагрев поверхности</span><span class="value" id="heatVal">65%</span></div>
+  <input id="heat" type="range" min="0" max="100" value="65">
+ </div>
+
+ <div class="group">
+  <div class="label"><span>Влажность воздуха</span><span class="value" id="moistVal">85%</span></div>
+  <input id="moist" type="range" min="30" max="100" value="85">
+ </div>
+
+ <div class="group">
+  <div class="label"><span>Фоновый ветер</span><span class="value" id="windVal">12 m/s</span></div>
+  <input id="wind" type="range" min="0" max="35" value="12">
+ </div>
+
+ <div class="group">
+  <div class="label"><span>Вертикальный сдвиг</span><span class="value" id="shearVal">15 m/s</span></div>
+  <input id="shear" type="range" min="0" max="35" value="15">
+ </div>
+
+ <h3>MODEL DIAGNOSTICS</h3>
+ <div class="statgrid">
+  <div class="stat"><small>MAX UPDRAFT</small><strong id="updraft">0.0 m/s</strong></div>
+  <div class="stat"><small>MAX CLOUD WATER</small><strong id="cloud">0.00 g/kg</strong></div>
+  <div class="stat"><small>MAX TEMPERATURE</small><strong id="temp">0.0 °C</strong></div>
+  <div class="stat"><small>MODEL TIME</small><strong id="time">00:00</strong></div>
+ </div>
+
+ <div class="group">
+  <div class="label"><span>Состояние конвекции</span><span class="value" id="conv">STABLE</span></div>
+  <div style="font-size:10px;color:#91afc5;line-height:1.5">
+   Облачность рассчитывается из поля влажности и температуры. Начальные тепловые возмущения запускают развитие конвекции.
+  </div>
+ </div>
+</div>
+
+<div id="help">
+ Одно касание — вращение<br>
+ Два пальца — масштаб и перемещение<br>
+ Колесо мыши — приближение
+</div>
+
 <script type="module">
-import * as THREE from "three";
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import {OrbitControls} from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
 
-const stage=document.getElementById("stage");
-const errorBox=document.getElementById("error");
-const loading=document.getElementById("loading");
-function showError(message){errorBox.style.display="block";errorBox.textContent="STORMLAB ERROR\n\n"+message;loading.style.display="none";}
+/* =========================================================
+   STORMLAB 3D
+   Experimental moist-convection model
 
-// Create and validate the WebGL context before Three.js queries its capabilities.
-let renderer;
-try{
- const canvas=document.createElement("canvas");
- const attrs={alpha:false,antialias:false,depth:false,stencil:false,powerPreference:"default",failIfMajorPerformanceCaveat:false,preserveDrawingBuffer:false};
- const gl=canvas.getContext("webgl2",attrs);
- if(!gl)throw new Error("Safari не смог создать WebGL 2 context. Закройте лишние вкладки и перезагрузите страницу.");
- const precision=gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT);
- if(!precision||precision.precision===0)throw new Error("GPU не предоставляет highp precision для фрагментных шейдеров.");
- renderer=new THREE.WebGLRenderer({canvas,context:gl,antialias:false,alpha:false,powerPreference:"default",failIfMajorPerformanceCaveat:false});
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth < 700 ? 0.48 : 0.75));
- renderer.setSize(innerWidth,innerHeight,false);
- renderer.outputColorSpace=THREE.SRGBColorSpace;
- renderer.setClearColor(0x071522,1);
- stage.appendChild(renderer.domElement);
-}catch(e){showError("Не удалось запустить WebGL 2.\n\n"+String(e));throw e;}
+   This is a simplified educational numerical model.
+   It is not a research-grade cloud-resolving model.
+========================================================= */
 
-renderer.domElement.addEventListener("webglcontextlost",e=>{e.preventDefault();showError("GPU context потерян. Возможно, Safari ограничил использование видеопамяти. Перезагрузите страницу.");});
+/* ---------------- GRID ---------------- */
 
-const scene=new THREE.Scene();
-const camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-const uniforms={
- resolution:{value:new THREE.Vector2(innerWidth,innerHeight)},
- cam:{value:new THREE.Vector3(0,3600,10500)},forward:{value:new THREE.Vector3(0,-.15,-1)},right:{value:new THREE.Vector3(1,0,0)},up:{value:new THREE.Vector3(0,1,0)},
- zoom:{value:1},time:{value:0},density:{value:1},coverage:{value:.75},wind:{value:18},sun:{value:35},growth:{value:.65},quality:{value:1},lightning:{value:0},scientific:{value:0},contours:{value:1},
- cloudPos:{value:Array.from({length:6},()=>new THREE.Vector4())},cloudData:{value:Array.from({length:6},()=>new THREE.Vector4())}
+const NX=28;
+const NY=24;
+const NZ=28;
+const N=NX*NY*NZ;
+
+const DX=500;
+const DZ=500;
+const DY=500;
+
+const WIDTH=NX*DX/1000;
+const HEIGHT=NY*DY/1000;
+const DEPTH=NZ*DZ/1000;
+
+const DT=1.0;
+
+const idx=(x,y,z)=>x+NX*(y+NY*z);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+const fields={
+ u:new Float32Array(N),
+ v:new Float32Array(N),
+ w:new Float32Array(N),
+ temp:new Float32Array(N),
+ qv:new Float32Array(N),
+ qc:new Float32Array(N),
+ qr:new Float32Array(N),
+ buoy:new Float32Array(N)
 };
 
-const vertexShader=`
-varying vec2 vUv;
-void main(){vUv=uv;gl_Position=vec4(position,1.0);}
-`;
+const old={
+ temp:new Float32Array(N),
+ qv:new Float32Array(N),
+ qc:new Float32Array(N),
+ qr:new Float32Array(N),
+ u:new Float32Array(N),
+ v:new Float32Array(N),
+ w:new Float32Array(N)
+};
 
-const fragmentShader=`
-precision highp float;
-varying vec2 vUv;
-uniform vec2 resolution;
-uniform vec3 cam,forward,right,up;
-uniform float zoom,time,density,coverage,wind,sun,growth,quality,lightning,scientific,contours;
-uniform vec4 cloudPos[6];
-uniform vec4 cloudData[6];
+let simTime=0;
+let paused=false;
+let frameCount=0;
+let maxUpdraft=0;
+let maxCloud=0;
+let maxTemp=0;
 
-float hash(vec3 p){p=fract(p*.1031);p+=dot(p,p.yzx+33.33);return fract((p.x+p.y)*p.z);}
-float noise(vec3 p){
- vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
- return mix(
-  mix(mix(hash(i),hash(i+vec3(1.,0.,0.)),f.x),mix(hash(i+vec3(0.,1.,0.)),hash(i+vec3(1.,1.,0.)),f.x),f.y),
-  mix(mix(hash(i+vec3(0.,0.,1.)),hash(i+vec3(1.,0.,1.)),f.x),mix(hash(i+vec3(0.,1.,1.)),hash(i+vec3(1.,1.,1.)),f.x),f.y),f.z);
-}
-float fbm(vec3 p){
- // Three octaves retain large billows while keeping mobile raymarching affordable.
- float n=noise(p)*.57;
- n+=noise(p*2.03+vec3(17.1,9.2,13.7))*.29;
- n+=noise(p*4.11+vec3(31.4,18.6,27.2))*.14;
- return n;
+/* ---------------- ATMOSPHERE ---------------- */
+
+function envTemp(height){
+ return 300.15-0.0065*height;
 }
 
-// Multi-scale erosion plus broad billows. All dimensions remain in world units.
-float cloudDensity(vec3 p,int index){
- vec4 c=cloudPos[index],d=cloudData[index];
- vec2 advection=vec2(wind*time*.45,wind*time*.16);
- vec2 q=p.xz-c.xy-advection;
- float h=(p.y-c.z)/max(1.,c.w-c.z);
- if(h<0.||h>1.08)return 0.;
- float type=d.x,radius=d.y,seed=d.z;
- float baseFade=smoothstep(0.,.055,h);
- float topFade=1.-smoothstep(1.015,1.08,h);
- float radial=length(q)/radius;
- float body=0.;
-
- if(type<.5){
-  float width=mix(1.02,.47,h);
-  body=1.-radial/width;
-  float lobes=0.;
-  for(int k=0;k<5;k++){
-   float a=float(k)*1.2566+seed;
-   vec2 off=vec2(cos(a),sin(a))*radius*.25;
-   float lobe=1.-length(q-off)/(radius*.31);
-   lobes=max(lobes,lobe);
-  }
-  body=max(body,lobes*(.45+.35*smoothstep(.1,.45,h)));
- }else if(type<1.5){
-  float coreWidth=mix(.86,.34,h);
-  float core=1.-radial/coreWidth;
-  float towers=0.;
-  for(int k=0;k<4;k++){
-   float a=float(k)*1.5708+seed;
-   vec2 off=vec2(cos(a),sin(a))*radius*.19;
-   float tower=1.-length(q-off)/(radius*(.19-.045*h));
-   towers=max(towers,tower);
-  }
-  float towerShape=towers*smoothstep(.04,.23,h)*(1.-smoothstep(.78,.96,h));
-  float bodyShape=max(core*.72,towerShape);
-
-  vec2 axis=vec2(cos(seed*1.7),sin(seed*1.7));
-  float along=dot(q,axis);
-  float across=dot(q,vec2(-axis.y,axis.x));
-  float anvilStart=smoothstep(.53,.72,h);
-  float anvilEnd=1.-smoothstep(.91,1.015,h);
-  float anvilWidth=mix(.30,.47,smoothstep(.65,.9,h))*radius;
-  float anvil=1.-length(vec2(along/(radius*2.15),across/anvilWidth));
-  anvil*=anvilStart*anvilEnd;
-
-  // Overshooting top: compact dome protruding above the anvil.
-  float otRadius=radius*(.20+.035*sin(seed*4.0));
-  float ot=1.-length(q)/otRadius;
-  ot*=smoothstep(.82,.91,h)*(1.-smoothstep(1.015,1.075,h));
-  ot*=.95;
-
-  body=max(bodyShape,anvil*.92);
-  body=max(body,ot);
- }else{
-  body=1.-radial/1.12;
-  body*=.82+.18*sin(q.x*.0013+seed)*sin(q.y*.0011);
- }
- if(body<-.25)return 0.;
-
- vec3 np=vec3(p.x*.0025,p.y*.0030,p.z*.0025);
- np+=vec3(seed*3.1,time*.006*wind/18.,seed*2.3);
- float broad=fbm(np);
- float medium=noise(np*3.15+vec3(4.2,1.7,8.3));
- float fine=noise(np*6.2+seed*11.);
- float erosion=(broad-.48)*.62+(medium-.5)*.26+(fine-.5)*.13;
- float convective=(type>.5&&type<1.5)?growth*.20:0.;
- float cover=(coverage-.5)*.30;
- float result=body+erosion+convective+cover-.14;
- result*=baseFade*topFade;
- result*=density;
- return clamp(result,0.,1.25);
+function pressureAt(height){
+ return 101325*Math.exp(-height/8400);
 }
 
-float totalDensity(vec3 p){
- float result=0.;
- for(int i=0;i<6;i++){float d=cloudDensity(p,i);result=1.-(1.-result)*(1.-d*.86);}
- return result;
-}
-float groundHeight(vec2 p){return sin(p.x*.00035)*45.+sin(p.y*.00042)*36.+noise(vec3(p.x*.0003,0.,p.y*.0003))*75.;}
-vec3 skyColor(vec3 rd){
- float h=max(rd.y,0.);
- vec3 col=mix(vec3(.72,.81,.88),vec3(.13,.39,.68),pow(h,.65));
- vec3 sunDir=normalize(vec3(-.55,sin(radians(sun)),.65));
- float s=max(dot(rd,sunDir),0.);
- col+=vec3(1.,.8,.58)*pow(s,170.)*.9;
- col+=vec3(.55,.69,.85)*pow(s,9.)*.1;
- if(rd.y<0.)col=mix(col,vec3(.12,.17,.19),clamp(-rd.y*3.,0.,1.));
- return col;
-}
-vec3 groundColor(vec3 p){
- float n=noise(vec3(p.x*.001,0.,p.z*.001));
- float fine=noise(vec3(p.x*.009,1.,p.z*.009));
- vec3 grass=mix(vec3(.13,.19,.15),vec3(.27,.31,.23),n)+fine*.035;
- float contour=0.;
- if(contours>.5){float h=groundHeight(p.xz);contour=1.-smoothstep(0.,2.5,abs(mod(h+500.,100.)-50.));}
- return mix(grass,vec3(.37,.43,.42),contour*.12);
+function qsat(tempK,pressure){
+ const tc=tempK-273.15;
+ const es=611.2*Math.exp(17.67*tc/(tc+243.5));
+ return 0.622*es/(pressure-es)*1000;
 }
 
-void main(){
- vec2 uv=vUv*2.-1.;uv.x*=resolution.x/resolution.y;
- vec3 rd=normalize(forward+right*uv.x*zoom+up*uv.y*zoom);
- vec3 col=skyColor(rd);
- if(rd.y<-.0001){
-  float gt=-cam.y/rd.y;
-  if(gt>0.&&gt<50000.){vec3 gp=cam+rd*gt;gp.y=groundHeight(gp.xz);col=mix(col,groundColor(gp),exp(-gt*.000075));}
- }
- vec3 boxMin=vec3(-10000.,250.,-10000.),boxMax=vec3(10000.,10500.,10000.);
- vec3 inv=1./rd,t0=(boxMin-cam)*inv,t1=(boxMax-cam)*inv;
- vec3 lo=min(t0,t1),hi=max(t0,t1);
- float entry=max(max(lo.x,lo.y),lo.z),exit=min(min(hi.x,hi.y),hi.z);
- float t=max(entry,0.),finish=min(exit,20000.);
- if(finish>t){
-  int steps=quality<1.5?10:quality<2.5?16:22;
-  float ds=(finish-t)/float(steps),trans=1.;vec3 accum=vec3(0.);
-  vec3 sunDir=normalize(vec3(-.55,sin(radians(sun)),.65));
-  for(int i=0;i<22;i++){
-   if(i>=steps||trans<.025)break;
-   vec3 p=cam+rd*(t+(float(i)+.5)*ds);
-   if(p.y>250.&&p.y<10500.){
-    float den=totalDensity(p);
-    if(den>.015){
-     float hf=clamp((p.y-500.)/7500.,0.,1.);
-     float phase=.42+.33*max(dot(rd,sunDir),0.)+hf*.13;
-     vec3 cloud=mix(vec3(.25,.31,.39),vec3(.93,.96,.99),clamp(phase,0.,1.));
-     float rim=pow(max(dot(rd,sunDir),0.),2.);
-     cloud+=vec3(.15,.17,.19)*rim;
-     float alpha=1.-exp(-den*ds*.00125);
-     accum+=trans*alpha*cloud;
-     trans*=1.-alpha;
-    }
+function initialize(){
+
+ simTime=0;
+ maxUpdraft=0;
+ maxCloud=0;
+
+ const humidity=Number(moist.value)/100;
+
+ for(let z=0;z<NZ;z++){
+  for(let y=0;y<NY;y++){
+   for(let x=0;x<NX;x++){
+
+    const i=idx(x,y,z);
+    const h=y*DY;
+    const T=envTemp(h);
+
+    fields.temp[i]=T;
+    fields.qv[i]=qsat(T,pressureAt(h))*humidity;
+    fields.qc[i]=0;
+    fields.qr[i]=0;
+
+    const wind=Number(windSlider.value);
+    const shear=Number(shearSlider.value);
+
+    fields.u[i]=wind+shear*(h/HEIGHT/1000);
+    fields.v[i]=0;
+    fields.w[i]=0;
+
+    fields.buoy[i]=0;
    }
   }
-  col=accum+trans*col;
  }
- col+=vec3(.65,.79,1.)*lightning*.25;
- col=pow(max(col,0.),vec3(.95));
- gl_FragColor=vec4(col,1.);
+
+ // Small thermal perturbations at the surface.
+ // These are initial atmospheric disturbances,
+ // not predefined cloud objects.
+
+ for(let z=0;z<NZ;z++){
+  for(let x=0;x<NX;x++){
+
+   const px=(x-NX*.5);
+   const pz=(z-NZ*.5);
+
+   const r1=Math.sqrt((px+5)**2+(pz+2)**2);
+   const r2=Math.sqrt((px-5)**2+(pz-4)**2);
+   const r3=Math.sqrt((px)**2+(pz+7)**2);
+
+   const bubble=
+    1.1*Math.exp(-r1*r1/9)+
+    0.8*Math.exp(-r2*r2/12)+
+    0.65*Math.exp(-r3*r3/14);
+
+   const i=idx(x,0,z);
+   fields.temp[i]+=bubble;
+  }
+ }
+
+ updateVolume();
 }
-`;
 
-const material=new THREE.ShaderMaterial({vertexShader,fragmentShader,uniforms,depthTest:false,depthWrite:false});
-const plane=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);
-scene.add(plane);
+/* ---------------- INTERPOLATION ---------------- */
 
-const presets={
- severe:[[0,0,450,7500,1,1500,2.1],[3200,-1400,500,6200,1,1200,3.2],[-3100,1800,600,5900,1,1250,4.3],[4700,2400,700,4800,0,1000,5.4],[-4500,-2500,500,5000,2,1450,6.5],[1200,4300,700,5500,1,1150,7.6]],
- supercell:[[0,0,350,9200,1,1900,2.1],[3800,2000,650,4800,0,1050,3.2],[-3900,-2300,500,4600,2,1300,4.3],[4500,-3000,600,5000,0,1000,5.4],[-4300,2800,750,5200,1,1100,6.5],[1500,-4400,450,4700,0,1050,7.6]],
- tower:[[0,0,300,8500,1,1500,1.1],[2600,-1700,350,7600,1,1300,2.2],[-2800,1700,400,7400,1,1250,3.3],[4000,2600,500,6300,0,1100,4.4],[-4000,-2600,450,6200,0,1050,5.5],[1000,4200,400,6800,1,1200,6.6]],
- mixed:[[0,0,450,7400,1,1450,1.1],[2700,-1600,650,4800,0,1100,2.2],[-2700,1900,550,4400,2,1600,3.3],[4200,2200,650,6400,1,1250,4.4],[-4300,-2200,500,5200,0,1050,5.5],[900,4200,700,5000,2,1700,6.6]],
- stratus:[[0,0,650,3400,2,2400,1.1],[3400,0,700,3600,2,2300,2.2],[-3400,500,650,3300,2,2200,3.3],[0,3500,700,3200,2,2300,4.4],[0,-3500,650,3500,2,2400,5.5],[4500,3000,750,3300,2,1900,6.6]]
-};
-function setPreset(name){const arr=presets[name]||presets.severe;for(let i=0;i<6;i++){const a=arr[i];uniforms.cloudPos.value[i].set(a[0],a[1],a[2],a[3]);uniforms.cloudData.value[i].set(a[4],a[5],a[6],0);}}
-setPreset("severe");
+function sample(arr,x,y,z){
 
-let yaw=0,pitch=.12,radius=10500;
-let target=new THREE.Vector3(0,2500,0);
-function updateCamera(){
- pitch=THREE.MathUtils.clamp(pitch,-.35,1.15);
- const pos=new THREE.Vector3(target.x+Math.sin(yaw)*Math.cos(pitch)*radius,target.y+Math.sin(pitch)*radius,target.z+Math.cos(yaw)*Math.cos(pitch)*radius);
- const f=target.clone().sub(pos).normalize();
- const r=new THREE.Vector3().crossVectors(f,new THREE.Vector3(0,1,0)).normalize();
- const u=new THREE.Vector3().crossVectors(r,f).normalize();
- uniforms.cam.value.copy(pos);uniforms.forward.value.copy(f);uniforms.right.value.copy(r);uniforms.up.value.copy(u);
+ x=clamp(x,0,NX-1.001);
+ y=clamp(y,0,NY-1.001);
+ z=clamp(z,0,NZ-1.001);
+
+ const x0=Math.floor(x);
+ const y0=Math.floor(y);
+ const z0=Math.floor(z);
+
+ const x1=x0+1;
+ const y1=y0+1;
+ const z1=z0+1;
+
+ const fx=x-x0;
+ const fy=y-y0;
+ const fz=z-z0;
+
+ const a=arr[idx(x0,y0,z0)]*(1-fx)+arr[idx(x1,y0,z0)]*fx;
+ const b=arr[idx(x0,y1,z0)]*(1-fx)+arr[idx(x1,y1,z0)]*fx;
+ const c=arr[idx(x0,y0,z1)]*(1-fx)+arr[idx(x1,y0,z1)]*fx;
+ const d=arr[idx(x0,y1,z1)]*(1-fx)+arr[idx(x1,y1,z1)]*fx;
+
+ return (a*(1-fy)+b*fy)*(1-fz)+(c*(1-fy)+d*fy)*fz;
 }
-updateCamera();
 
-let pointers=new Map(),lastPinch=0,pan=false;
-renderer.domElement.addEventListener("pointerdown",e=>{renderer.domElement.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});pan=e.button===2||e.shiftKey;});
-renderer.domElement.addEventListener("pointermove",e=>{
- if(!pointers.has(e.pointerId))return;
- const old=pointers.get(e.pointerId),dx=e.clientX-old.x,dy=e.clientY-old.y;
- pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(pointers.size>=2){const pts=[...pointers.values()];const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);if(lastPinch)radius=THREE.MathUtils.clamp(radius*lastPinch/dist,1000,30000);lastPinch=dist;}
- else if(pan){target.x-=dx*radius*.0015;target.y+=dy*radius*.0015;}
- else{yaw-=dx*.004;pitch+=dy*.003;}
- updateCamera();
+function copyFields(){
+ for(const k of Object.keys(old)){
+  old[k].set(fields[k]);
+ }
+}
+
+/* ---------------- ADVECTION ---------------- */
+
+function advectScalars(){
+
+ copyFields();
+
+ const scale=DT/DX;
+
+ for(let z=1;z<NZ-1;z++){
+  for(let y=1;y<NY-1;y++){
+   for(let x=1;x<NX-1;x++){
+
+    const i=idx(x,y,z);
+
+    const bx=x-old.u[i]*scale;
+    const by=y-old.w[i]*DT/DY;
+    const bz=z-old.v[i]*scale;
+
+    fields.temp[i]=sample(old.temp,bx,by,bz);
+    fields.qv[i]=sample(old.qv,bx,by,bz);
+    fields.qc[i]=sample(old.qc,bx,by,bz);
+    fields.qr[i]=sample(old.qr,bx,by,bz);
+   }
+  }
+ }
+}
+
+/* ---------------- BUOYANCY ---------------- */
+
+function calculateBuoyancy(){
+
+ const heat=Number(heatSlider.value)/100;
+
+ maxUpdraft=0;
+ maxTemp=-100;
+
+ for(let z=1;z<NZ-1;z++){
+  for(let y=1;y<NY-1;y++){
+   for(let x=1;x<NX-1;x++){
+
+    const i=idx(x,y,z);
+    const h=y*DY;
+
+    const environmental=envTemp(h);
+    const T=fields.temp[i];
+
+    const vapor=fields.qv[i]/1000;
+    const cloud=fields.qc[i]/1000;
+
+    const virtualT=T*(1+0.61*vapor-cloud);
+
+    const buoyancy=9.81*(virtualT-environmental)/environmental;
+
+    fields.buoy[i]=buoyancy;
+
+    fields.w[i]+=buoyancy*DT;
+
+    // Numerical damping
+    fields.w[i]*=0.994;
+
+    fields.w[i]=clamp(fields.w[i],-12,45);
+
+    // Dry adiabatic temperature change during vertical motion.
+    fields.temp[i]-=0.0098*fields.w[i]*DT;
+
+    // Surface heat flux
+    if(y<3){
+     const surfaceFactor=(1-y/3);
+     fields.temp[i]+=heat*0.014*surfaceFactor*DT;
+    }
+
+    // Small turbulent perturbations
+    const noise=Math.sin(x*12.9898+z*78.233+y*37.719+simTime*.13);
+    fields.temp[i]+=noise*0.0007;
+
+    maxUpdraft=Math.max(maxUpdraft,fields.w[i]);
+    maxTemp=Math.max(maxTemp,T-273.15);
+   }
+  }
+ }
+}
+
+/* ---------------- MOIST MICROPHYSICS ---------------- */
+
+function microphysics(){
+
+ const humidity=Number(moist.value)/100;
+
+ maxCloud=0;
+
+ for(let z=1;z<NZ-1;z++){
+  for(let y=1;y<NY-1;y++){
+   for(let x=1;x<NX-1;x++){
+
+    const i=idx(x,y,z);
+    const h=y*DY;
+
+    const T=fields.temp[i];
+    const p=pressureAt(h);
+
+    const saturation=qsat(T,p);
+    const excess=fields.qv[i]-saturation;
+
+    // Condensation
+    if(excess>0){
+     const cond=Math.min(excess,excess*0.22);
+     fields.qv[i]-=cond;
+     fields.qc[i]+=cond;
+    }
+
+    // Evaporation
+    if(excess<0 && fields.qc[i]>0){
+     const evap=Math.min(fields.qc[i],-excess*0.08);
+     fields.qc[i]-=evap;
+     fields.qv[i]+=evap;
+    }
+
+    // Autoconversion to rain
+    if(fields.qc[i]>1.0){
+     const convert=(fields.qc[i]-1.0)*0.012;
+     fields.qc[i]-=convert;
+     fields.qr[i]+=convert;
+    }
+
+    // Rain fallout
+    const fall=Math.min(fields.qr[i],0.025);
+    fields.qr[i]-=fall;
+
+    if(y>0){
+     const below=idx(x,y-1,z);
+     fields.qr[below]+=fall*0.94;
+    }
+
+    // Evaporative cooling from rain
+    if(fields.qr[i]>0 && fields.qv[i]<saturation){
+     fields.temp[i]-=fields.qr[i]*0.0008;
+    }
+
+    fields.qv[i]=clamp(fields.qv[i],0,30);
+    fields.qc[i]=clamp(fields.qc[i],0,8);
+    fields.qr[i]=clamp(fields.qr[i],0,15);
+
+    maxCloud=Math.max(maxCloud,fields.qc[i]);
+   }
+  }
+ }
+}
+
+/* ---------------- WIND FIELD ---------------- */
+
+function updateWinds(){
+
+ copyFields();
+
+ const wind=Number(windSlider.value);
+ const shear=Number(shearSlider.value);
+
+ for(let z=1;z<NZ-1;z++){
+  for(let y=1;y<NY-1;y++){
+   for(let x=1;x<NX-1;x++){
+
+    const i=idx(x,y,z);
+
+    const h=y*DY;
+
+    const duDz=
+     (old.w[idx(x,y,z)]-old.w[idx(x,y-1,z)])/DY;
+
+    const dwDx=
+     (old.w[idx(x+1,y,z)]-old.w[idx(x-1,y,z)])/(2*DX);
+
+    const dwDz=
+     (old.w[idx(x,y,z+1)]-old.w[idx(x,y,z-1)])/(2*DZ);
+
+    const dvDy=
+     (old.v[idx(x,y+1,z)]-old.v[idx(x,y-1,z)])/(2*DY);
+
+    // Background wind profile
+    const targetU=wind+shear*(h/HEIGHT);
+
+    fields.u[i]+=(targetU-fields.u[i])*0.006;
+
+    // Simplified pressure-gradient / mass-continuity response.
+    fields.u[i]-=dwDx*DT*0.15;
+    fields.v[i]-=dwDz*DT*0.15;
+
+    fields.u[i]=clamp(fields.u[i],-40,70);
+    fields.v[i]=clamp(fields.v[i],-35,35);
+
+    // Weak turbulent mixing
+    fields.u[i]=fields.u[i]*0.998+wind*0.002;
+   }
+  }
+ }
+}
+
+/* ---------------- MODEL STEP ---------------- */
+
+function modelStep(){
+
+ advectScalars();
+ calculateBuoyancy();
+ microphysics();
+ updateWinds();
+
+ simTime+=DT;
+
+ frameCount++;
+
+ if(frameCount%3===0){
+  updateVolume();
+  updateStats();
+ }
+}
+
+/* =========================================================
+   THREE.JS VISUALIZATION
+========================================================= */
+
+const container=document.getElementById("view");
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9dbbd3);
+
+const camera=new THREE.PerspectiveCamera(
+ 48,
+ window.innerWidth/window.innerHeight,
+ 0.1,
+ 250
+);
+
+camera.position.set(25,18,31);
+
+const renderer=new THREE.WebGLRenderer({
+ antialias:false,
+ alpha:false,
+ powerPreference:"high-performance"
 });
-function pointerEnd(e){pointers.delete(e.pointerId);if(pointers.size<2)lastPinch=0;}
-renderer.domElement.addEventListener("pointerup",pointerEnd);renderer.domElement.addEventListener("pointercancel",pointerEnd);renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
-renderer.domElement.addEventListener("wheel",e=>{radius=THREE.MathUtils.clamp(radius*Math.exp(e.deltaY*.001),1000,30000);updateCamera();},{passive:true});
 
-function slider(id,uniform,out,format,scale=1){const el=document.getElementById(id),label=document.getElementById(out);function apply(){const value=+el.value;uniforms[uniform].value=value*scale;label.textContent=format(value);}el.addEventListener("input",apply);apply();}
-slider("density","density","densityV",v=>v.toFixed(2));
-slider("coverage","coverage","coverageV",v=>v+"%",.01);
-slider("wind","wind","windV",v=>v+" м/с");
-slider("sun","sun","sunV",v=>v+"°");
-slider("growth","growth","growthV",v=>v+"%",.01);
-document.getElementById("quality").addEventListener("input",e=>{uniforms.quality.value=+e.target.value;document.getElementById("qualityV").textContent=e.target.value;});
-document.getElementById("preset").addEventListener("change",e=>setPreset(e.target.value));
-let paused=false;
-document.getElementById("pause").onclick=e=>{paused=!paused;e.target.textContent=paused?"▶ Продолжить":"Ⅱ Пауза";};
-document.getElementById("reset").onclick=()=>{yaw=0;pitch=.12;radius=10500;target.set(0,2500,0);updateCamera();};
-let lightningEnd=0;
-document.getElementById("lightning").onclick=()=>{lightningEnd=performance.now()+700;};
-let scientific=false;
-document.getElementById("scientific").onclick=e=>{scientific=!scientific;uniforms.scientific.value=scientific?1:0;e.target.classList.toggle("active",scientific);};
-document.getElementById("contours").onchange=e=>{uniforms.contours.value=e.target.checked?1:0;};
-let animation=true;
-document.getElementById("animation").onchange=e=>{animation=e.target.checked;};
-document.getElementById("mobile").onclick=()=>{document.getElementById("panel").classList.toggle("hidden");};
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.15));
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
 
-function resize(){const isMobile=innerWidth<700;renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isMobile ? 0.48 : 0.75));renderer.setSize(innerWidth,innerHeight,false);uniforms.resolution.value.set(innerWidth,innerHeight);}
-window.addEventListener("resize",resize);
+container.appendChild(renderer.domElement);
 
-let last=performance.now(),frames=0,lastFps=performance.now(),firstFrame=true,stopped=false;
-function animate(now){
- if(stopped)return;
- requestAnimationFrame(animate);
- const dt=Math.min((now-last)*.001,.05);last=now;
- if(!paused&&animation)uniforms.time.value+=dt;
- uniforms.lightning.value=now<lightningEnd?1:0;
- try{
-  renderer.render(scene,camera);
-  if(firstFrame){firstFrame=false;loading.style.opacity="0";setTimeout(()=>{if(loading.parentNode)loading.remove();},600);}
- }catch(e){stopped=true;showError("Ошибка рендеринга:\n"+String(e));return;}
- frames++;
- if(now-lastFps>1000){const fps=Math.round(frames*1000/(now-lastFps));document.getElementById("fps").textContent="LIVE · "+fps+" FPS";frames=0;lastFps=now;}
+/* ---------------- CAMERA CONTROLS ---------------- */
+
+const controls=new OrbitControls(camera,renderer.domElement);
+
+controls.target.set(0,HEIGHT/2,0);
+controls.enableDamping=true;
+controls.dampingFactor=0.075;
+controls.enableZoom=true;
+controls.enablePan=true;
+controls.minDistance=5;
+controls.maxDistance=110;
+controls.maxPolarAngle=Math.PI*0.49;
+controls.zoomSpeed=1.15;
+controls.panSpeed=0.8;
+controls.update();
+
+/* ---------------- LIGHTS ---------------- */
+
+const ambient=new THREE.HemisphereLight(0xe9f5ff,0x61788b,2.0);
+scene.add(ambient);
+
+const sun=new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(-20,35,15);
+scene.add(sun);
+
+/* ---------------- GROUND ---------------- */
+
+const ground=new THREE.Mesh(
+ new THREE.PlaneGeometry(WIDTH,DEPTH),
+ new THREE.MeshStandardMaterial({
+  color:0x657d70,
+  roughness:1
+ })
+);
+
+ground.rotation.x=-Math.PI/2;
+ground.position.y=-0.08;
+scene.add(ground);
+
+/* ---------------- DOMAIN BOX ---------------- */
+
+const domain=new THREE.Box3(
+ new THREE.Vector3(-WIDTH/2,0,-DEPTH/2),
+ new THREE.Vector3(WIDTH/2,HEIGHT,DEPTH/2)
+);
+
+const edges=new THREE.EdgesGeometry(
+ new THREE.BoxGeometry(WIDTH,HEIGHT,DEPTH)
+);
+
+const frame=new THREE.LineSegments(
+ edges,
+ new THREE.LineBasicMaterial({
+  color:0x42657d,
+  transparent:true,
+  opacity:0.55
+ })
+);
+
+frame.position.y=HEIGHT/2;
+scene.add(frame);
+
+/* ---------------- GRID LINES ---------------- */
+
+const gridGroup=new THREE.Group();
+
+for(let x=-WIDTH/2;x<=WIDTH/2;x+=2.5){
+ const points=[
+  new THREE.Vector3(x,0,-DEPTH/2),
+  new THREE.Vector3(x,0,DEPTH/2)
+ ];
+ const g=new THREE.BufferGeometry().setFromPoints(points);
+ gridGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({
+  color:0x3d687b,transparent:true,opacity:0.25
+ })));
 }
+
+for(let z=-DEPTH/2;z<=DEPTH/2;z+=2.5){
+ const points=[
+  new THREE.Vector3(-WIDTH/2,0,z),
+  new THREE.Vector3(WIDTH/2,0,z)
+ ];
+ const g=new THREE.BufferGeometry().setFromPoints(points);
+ gridGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({
+  color:0x3d687b,transparent:true,opacity:0.25
+ })));
+}
+
+scene.add(gridGroup);
+
+/* =========================================================
+   3D CLOUD VOLUME
+
+   The density texture is populated from qc, the cloud-water
+   mixing ratio calculated by the numerical model.
+========================================================= */
+
+const volumeData=new Uint8Array(N);
+
+const volumeTexture=new THREE.Data3DTexture(
+ volumeData,NX,NY,NZ
+);
+
+volumeTexture.format=THREE.RedFormat;
+volumeTexture.type=THREE.UnsignedByteType;
+volumeTexture.minFilter=THREE.LinearFilter;
+volumeTexture.magFilter=THREE.LinearFilter;
+volumeTexture.unpackAlignment=1;
+volumeTexture.needsUpdate=true;
+
+const volumeMaterial=new THREE.ShaderMaterial({
+
+ glslVersion:THREE.GLSL3,
+
+ uniforms:{
+  densityTex:{value:volumeTexture},
+  cameraLocal:{value:new THREE.Vector3()},
+  boxSize:{value:new THREE.Vector3(WIDTH,HEIGHT,DEPTH)},
+  cloudOpacity:{value:1.0},
+  lightDir:{value:new THREE.Vector3(-0.5,0.8,0.4).normalize()}
+ },
+
+ vertexShader:`
+  out vec3 vLocal;
+
+  void main(){
+   vLocal=position;
+   gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+  }
+ `,
+
+ fragmentShader:`
+  precision highp float;
+  precision highp sampler3D;
+
+  uniform sampler3D densityTex;
+  uniform vec3 cameraLocal;
+  uniform vec3 boxSize;
+  uniform float cloudOpacity;
+  uniform vec3 lightDir;
+
+  in vec3 vLocal;
+  out vec4 outColor;
+
+  vec2 hitBox(vec3 ro,vec3 rd,vec3 bmin,vec3 bmax){
+   vec3 inv=1.0/rd;
+   vec3 t0=(bmin-ro)*inv;
+   vec3 t1=(bmax-ro)*inv;
+   vec3 lo=min(t0,t1);
+   vec3 hi=max(t0,t1);
+
+   float nearT=max(max(lo.x,lo.y),lo.z);
+   float farT=min(min(hi.x,hi.y),hi.z);
+
+   return vec2(nearT,farT);
+  }
+
+  float densityAt(vec3 p){
+   vec3 uvw=p/boxSize+0.5;
+   uvw=clamp(uvw,vec3(0.001),vec3(0.999));
+
+   float d=texture(densityTex,uvw).r;
+   return d;
+  }
+
+  void main(){
+
+   vec3 rd=normalize(vLocal-cameraLocal);
+   vec2 hit=hitBox(
+    cameraLocal,rd,
+    -boxSize*0.5,
+     boxSize*0.5
+   );
+
+   float start=max(hit.x,0.0);
+   float finish=hit.y;
+
+   if(finish<=start) discard;
+
+   float lengthRay=finish-start;
+   float stepSize=max(lengthRay/105.0,0.045);
+
+   vec3 color=vec3(0.0);
+   float alpha=0.0;
+
+   for(float t=start;t<finish;t+=stepSize){
+
+    vec3 p=cameraLocal+rd*t;
+    float d=densityAt(p);
+
+    d=smoothstep(0.035,0.48,d);
+
+    if(d>0.002){
+
+     vec3 uvw=p/boxSize+0.5;
+
+     float upper=clamp(uvw.y,0.0,1.0);
+
+     vec3 lightColor=mix(
+      vec3(0.38,0.49,0.59),
+      vec3(1.0,0.98,0.92),
+      upper
+     );
+
+     float lighting=0.72+0.28*max(dot(-rd,lightDir),0.0);
+
+     vec3 cloudColor=lightColor*lighting;
+
+     float a=d*0.075*cloudOpacity;
+
+     color+=(1.0-alpha)*cloudColor*a;
+     alpha+=(1.0-alpha)*a;
+
+     if(alpha>0.96) break;
+    }
+   }
+
+   if(alpha<0.008) discard;
+
+   outColor=vec4(color,alpha);
+  }
+ `,
+
+ transparent:true,
+ depthWrite:false,
+ side:THREE.BackSide
+});
+
+const cloudVolume=new THREE.Mesh(
+ new THREE.BoxGeometry(WIDTH,HEIGHT,DEPTH),
+ volumeMaterial
+);
+
+cloudVolume.position.y=HEIGHT/2;
+scene.add(cloudVolume);
+
+/* ---------------- TEXTURE UPDATE ---------------- */
+
+function updateVolume(){
+
+ let ptr=0;
+
+ for(let z=0;z<NZ;z++){
+  for(let y=0;y<NY;y++){
+   for(let x=0;x<NX;x++){
+
+    const i=idx(x,y,z);
+    const qc=fields.qc[i];
+
+    // Convert cloud water to normalized visible density.
+    const density=clamp((qc-0.025)/1.7,0,1);
+
+    volumeData[ptr++]=Math.round(
+     Math.pow(density,0.72)*255
+    );
+   }
+  }
+ }
+
+ volumeTexture.needsUpdate=true;
+}
+
+/* ---------------- DIAGNOSTICS ---------------- */
+
+function updateStats(){
+
+ document.getElementById("updraft").textContent=
+  maxUpdraft.toFixed(1)+" m/s";
+
+ document.getElementById("cloud").textContent=
+  maxCloud.toFixed(2)+" g/kg";
+
+ document.getElementById("temp").textContent=
+  maxTemp.toFixed(1)+" °C";
+
+ const seconds=Math.floor(simTime);
+ const mm=String(Math.floor(seconds/60)).padStart(2,"0");
+ const ss=String(seconds%60).padStart(2,"0");
+
+ document.getElementById("time").textContent=mm+":"+ss;
+
+ document.getElementById("conv").textContent=
+  maxUpdraft>8?"ACTIVE":
+  maxUpdraft>2?"DEVELOPING":"WEAK";
+
+ document.getElementById("status").textContent=
+  paused?"PAUSED":"MODEL RUNNING";
+}
+
+/* ---------------- UI ---------------- */
+
+const heatSlider=document.getElementById("heat");
+const moist=document.getElementById("moist");
+const windSlider=document.getElementById("wind");
+const shearSlider=document.getElementById("shear");
+
+function bindSlider(id,out,format){
+ const el=document.getElementById(id);
+ const label=document.getElementById(out);
+
+ const update=()=>label.textContent=format(Number(el.value));
+ el.addEventListener("input",update);
+ update();
+}
+
+bindSlider("speed","speedVal",v=>v.toFixed(1)+"×");
+bindSlider("heat","heatVal",v=>v+"%");
+bindSlider("moist","moistVal",v=>v+"%");
+bindSlider("wind","windVal",v=>v+" m/s");
+bindSlider("shear","shearVal",v=>v+" m/s");
+
+document.getElementById("pause").onclick=()=>{
+ paused=!paused;
+ document.getElementById("pause").textContent=
+  paused?"Продолжить":"Пауза";
+ updateStats();
+};
+
+document.getElementById("step").onclick=()=>{
+ if(paused){
+  modelStep();
+  updateStats();
+ }
+};
+
+document.getElementById("reset").onclick=()=>{
+ initialize();
+ updateStats();
+};
+
+document.getElementById("camera").onclick=()=>{
+ camera.position.set(25,18,31);
+ controls.target.set(0,HEIGHT/2,0);
+ controls.update();
+};
+
+moist.addEventListener("change",()=>{
+ // Humidity changes are applied to the next initialization.
+});
+
+/* ---------------- ANIMATION ---------------- */
+
+let last=performance.now();
+let accumulator=0;
+
+function animate(now){
+
+ requestAnimationFrame(animate);
+
+ const elapsed=Math.min((now-last)/1000,0.05);
+ last=now;
+
+ controls.update();
+
+ if(!paused){
+
+  accumulator+=elapsed*Number(speed.value);
+
+  let steps=0;
+
+  while(accumulator>=0.05 && steps<3){
+   modelStep();
+   accumulator-=0.05;
+   steps++;
+  }
+ }
+
+ volumeMaterial.uniforms.cameraLocal.value.copy(camera.position);
+
+ renderer.render(scene,camera);
+}
+
+window.addEventListener("resize",()=>{
+ camera.aspect=window.innerWidth/window.innerHeight;
+ camera.updateProjectionMatrix();
+
+ renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+initialize();
+updateStats();
+
+document.getElementById("loading").style.display="none";
+
 requestAnimationFrame(animate);
+
 </script>
 </body>
 </html>
